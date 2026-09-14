@@ -53,7 +53,7 @@
                     <v-main>
                         <v-window class="d-flex flex-grow-1 disable-tab-transition w-100-window-container" v-model="activeTab">
                             <v-window-item value="accountPage">
-                                <v-card variant="flat" min-height="780">
+                                <v-card variant="flat" min-height="1080">
                                     <template #title>
                                         <div class="title-and-toolbar d-flex align-center">
                                             <v-btn class="me-3 d-md-none" density="compact" color="default" variant="plain"
