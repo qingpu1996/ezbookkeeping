@@ -56,9 +56,7 @@
                     </div>
                 </li>
                 <li class="nav-link">
-                </li>
-                <li class="nav-link">
-                    <router-link to="/account/list">
+                    <router-link to="/account/list" :class="{ 'router-link-active': route.path.startsWith('/account/') }">
                         <v-icon class="nav-item-icon" :icon="mdiCreditCardOutline"/>
                         <span class="nav-item-title">{{ tt('Accounts') }}</span>
                     </router-link>
