@@ -1,6 +1,6 @@
 # Gold investment assets — development candidate
 
-Base: upstream v1.6.1 (`6ccd0c462100828c78e203792a5b2feb8d569039`). Branch: `feature/investment-assets`. This is a local development candidate, not an official release or a production upgrade.
+Base: upstream v1.6.1 (`6ccd0c462100828c78e203792a5b2feb8d569039`). Branch: `feature/investment-assets`. Custom release `1.6.1-gold.1` was deployed to the authorized amd64 NAS after isolated rehearsal on 2026-09-14. It is not an official upstream release. Deployed code revision: `7645b870`.
 
 ## Scope
 
@@ -60,13 +60,17 @@ Managed financial records cannot be changed through ordinary transaction, bulk, 
 
 The Vite chunk dependency option now includes dependencies recursively. The old false setting produced a circular initialization runtime error despite a successful build; the true setting was verified in the browser. See [Rolldown's option contract](https://rolldown.rs/reference/OutputOptions.codeSplitting).
 
-## Release gates still open
+## Deployment verification and remaining limitations
 
-1. Portable versioned investment export/import and round-trip validation. Ordinary CSV is not a complete gold backup; do not import both cash CSV and investment operations and double-count them.
-2. Versioned business migration/release packaging and image digest, NAS isolation upgrade/restore rehearsal, actual quote-source integration. Current migration only adds model tables via existing Sync2.
-3. Direct links/protection hints from old transaction pages, safe account metadata edits, detailed per-operation preview differences, included-fee input convenience and broader old-client/CLI/import regression coverage.
-4. The old clear-all API performs multiple independent service calls. The financial clear is transactionally guarded, but a concurrent new position bind can still race with earlier nonfinancial template clearing. A coordinated clear/bind operation must be addressed before production release.
-5. Dependency audit: npm reported 12 inherited findings (3 moderate, 9 high); applicability has not been reviewed. No blind dependency upgrade was performed.
-6. Real iPhone PWA login/session/background/retry behavior and user acceptance. No offline save guarantee.
+- The NAS PostgreSQL 17.11 backup was restored independently. All 16 pre-existing table fingerprints and original attachment files were unchanged by additive initialization. The pre-existing test account could log in and read its original transactions and receipt.
+- The synthetic gold lifecycle passed on that restored NAS instance. Its 21 tables and attachment files were then restored again into an independent database/storage; table fingerprints, quantities, cost, realized gains, revision history and authenticated receipt bytes matched.
+- Production was upgraded with the original database/storage mounts and application/database secrets. Validation ran on the isolated database network before restoring the original edge network. No real gold positions were initialized. Backup timer and registration policy were retained.
+- With investment assets enabled, the old clear-all-data API returns a protection error before any deletion. This is an explicit temporary restriction, not a newly implemented coordinated clear workflow. With the feature disabled, existing managed positions still prevent legacy clearing.
+- Runtime image: `nihplod/ezbookkeeping:1.6.1-gold.1`; image content ID `sha256:c7d96ab2c8c83e88df970adfb57df4495de14544ac7ef8d8beaa82fd42f66b82`. This is a locally built image ID, not a registry manifest digest. A Docker image archive was retained separately for recovery.
+- Axios was updated to 1.20.0 for reported security fixes. Remaining npm findings involve build tooling (Sass/Immutable, PostCSS/Nanoid, Vite and other development chains); the runtime image contains the Go binary and compiled public assets, not a Node build server. This is not a claim that all dependencies have a clean security audit.
+
+Portable versioned investment export/import, safe managed-account metadata edits, legacy transaction deep links and more detailed per-operation change previews remain follow-ups. Ordinary CSV is not a complete gold backup. Existing populated accounts are not converted; included-fee amounts must be normalized explicitly in the current form. The optional quote adapter is not yet connected to the live NAS data platform.
+
+Real iPhone PWA session/background/network-retry checks still require user acceptance. No offline saving or unbounded exactly-once guarantee is claimed. This deployment does not implement the remaining convenience and portability items in the original design.
 
 Full database + attachment + controlled secret backup remains the recovery foundation. Do not downgrade a live gold ledger to the official binary. Restore an explicitly selected compatible backup into an isolated target first; never erase the current ledger to hide upgrade problems.
