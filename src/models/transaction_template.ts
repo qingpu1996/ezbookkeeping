@@ -12,6 +12,7 @@ export class TransactionTemplate extends Transaction implements TransactionTempl
     public scheduledStartDate?: TextualYearMonthDay;
     public scheduledEndDate?: TextualYearMonthDay;
     public scheduledAt?: number;
+    public scheduledMinute: number = 0;
     public displayOrder: number;
     public hidden: boolean;
 
@@ -24,8 +25,20 @@ export class TransactionTemplate extends Transaction implements TransactionTempl
         this.scheduledStartDate = scheduledStartDate;
         this.scheduledEndDate = scheduledEndDate;
         this.scheduledAt = scheduledAt;
+        this.scheduledMinute = scheduledAt === undefined ? 0 : (scheduledAt + utcOffset + 1440) % 1440;
         this.displayOrder = displayOrder;
         this.hidden = hidden;
+    }
+
+    public get scheduledTime(): string {
+        return `${Math.floor(this.scheduledMinute / 60).toString().padStart(2, '0')}:${(this.scheduledMinute % 60).toString().padStart(2, '0')}`;
+    }
+
+    public set scheduledTime(value: string) {
+        if (/^([01]\d|2[0-3]):[0-5]\d$/.test(value)) {
+            const [hour, minute] = value.split(':').map(Number);
+            this.scheduledMinute = hour! * 60 + minute!;
+        }
     }
 
     public fillFrom(other: TransactionTemplate): void {
@@ -35,6 +48,7 @@ export class TransactionTemplate extends Transaction implements TransactionTempl
         if (this.templateType === TemplateType.Schedule.type) {
             this.scheduledFrequencyType = other.scheduledFrequencyType;
             this.scheduledFrequency = other.scheduledFrequency;
+            this.scheduledMinute = other.scheduledMinute;
             this.scheduledStartDate = other.scheduledStartDate;
             this.scheduledEndDate = other.scheduledEndDate;
             this.utcOffset = other.utcOffset;
@@ -55,6 +69,7 @@ export class TransactionTemplate extends Transaction implements TransactionTempl
             hideAmount: this.hideAmount,
             tagIds: this.tagIds,
             comment: this.comment,
+            scheduledMinute: this.templateType === TemplateType.Schedule.type ? this.scheduledMinute : undefined,
             scheduledFrequencyType: this.templateType === TemplateType.Schedule.type ? this.scheduledFrequencyType : undefined,
             scheduledFrequency: this.templateType === TemplateType.Schedule.type ? this.scheduledFrequency : undefined,
             scheduledStartDate: this.templateType === TemplateType.Schedule.type && this.scheduledStartDate ? this.scheduledStartDate : undefined,
@@ -77,6 +92,7 @@ export class TransactionTemplate extends Transaction implements TransactionTempl
             hideAmount: this.hideAmount,
             tagIds: this.tagIds,
             comment: this.comment,
+            scheduledMinute: this.templateType === TemplateType.Schedule.type ? this.scheduledMinute : undefined,
             scheduledFrequencyType: this.templateType === TemplateType.Schedule.type ? this.scheduledFrequencyType : undefined,
             scheduledFrequency: this.templateType === TemplateType.Schedule.type ? this.scheduledFrequency : undefined,
             scheduledStartDate: this.templateType === TemplateType.Schedule.type && this.scheduledStartDate ? this.scheduledStartDate : undefined,
@@ -162,6 +178,7 @@ export interface TransactionTemplateCreateRequest {
     readonly hideAmount: boolean;
     readonly tagIds: string[];
     readonly comment: string;
+    readonly scheduledMinute?: number;
     readonly scheduledFrequencyType?: number;
     readonly scheduledFrequency?: string;
     readonly scheduledStartDate?: string;
@@ -182,6 +199,7 @@ export interface TransactionTemplateModifyRequest {
     readonly hideAmount: boolean;
     readonly tagIds: string[];
     readonly comment: string;
+    readonly scheduledMinute?: number;
     readonly scheduledFrequencyType?: number;
     readonly scheduledFrequency?: string;
     readonly scheduledStartDate?: string;
@@ -210,6 +228,7 @@ export interface TransactionTemplateDeleteRequest {
 export interface TransactionTemplateInfoResponse extends TransactionInfoResponse {
     readonly templateType: number;
     readonly name: string;
+    readonly scheduledMinute?: number;
     readonly scheduledFrequencyType?: number;
     readonly scheduledFrequency?: string;
     readonly scheduledStartDate?: TextualYearMonthDay;

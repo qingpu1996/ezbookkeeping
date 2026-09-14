@@ -290,7 +290,7 @@ func (a *TransactionTemplatesApi) TemplateModifyHandler(c *core.WebContext) (any
 	if template.TemplateType == models.TRANSACTION_TEMPLATE_TYPE_SCHEDULE {
 		newTemplate.ScheduledFrequencyType = *templateModifyReq.ScheduledFrequencyType
 		newTemplate.ScheduledFrequency = a.getOrderedFrequencyValues(*templateModifyReq.ScheduledFrequency)
-		newTemplate.ScheduledAt = a.getUTCScheduledAt(*templateModifyReq.ScheduledTimezoneUtcOffset)
+		newTemplate.ScheduledAt = scheduleMinuteUTC(templateModifyReq.ScheduledMinute, *templateModifyReq.ScheduledTimezoneUtcOffset, (template.ScheduledAt+template.ScheduledTimezoneUtcOffset+1440)%1440)
 		newTemplate.ScheduledTimezoneUtcOffset = *templateModifyReq.ScheduledTimezoneUtcOffset
 
 		if templateModifyReq.ScheduledStartDate != nil {
@@ -501,7 +501,7 @@ func (a *TransactionTemplatesApi) createNewTemplateModel(uid int64, templateCrea
 	if templateCreateReq.TemplateType == models.TRANSACTION_TEMPLATE_TYPE_SCHEDULE {
 		template.ScheduledFrequencyType = *templateCreateReq.ScheduledFrequencyType
 		template.ScheduledFrequency = a.getOrderedFrequencyValues(*templateCreateReq.ScheduledFrequency)
-		template.ScheduledAt = a.getUTCScheduledAt(*templateCreateReq.ScheduledTimezoneUtcOffset)
+		template.ScheduledAt = scheduleMinuteUTC(templateCreateReq.ScheduledMinute, *templateCreateReq.ScheduledTimezoneUtcOffset, 0)
 		template.ScheduledTimezoneUtcOffset = *templateCreateReq.ScheduledTimezoneUtcOffset
 
 		if templateCreateReq.ScheduledStartDate != nil {
@@ -532,16 +532,6 @@ func (a *TransactionTemplatesApi) createNewTemplateModel(uid int64, templateCrea
 	}
 
 	return template, nil
-}
-
-func (a *TransactionTemplatesApi) getUTCScheduledAt(scheduledTimezoneUtcOffset int16) int16 {
-	templateTimeZone := time.FixedZone("Template Timezone", int(scheduledTimezoneUtcOffset)*60)
-	transactionTime := time.Date(2020, 1, 1, 0, 0, 0, 0, templateTimeZone)
-	transactionTimeInUTC := transactionTime.In(time.UTC)
-
-	minutesElapsedOfDayInUtc := transactionTimeInUTC.Hour()*60 + transactionTimeInUTC.Minute()
-
-	return int16(minutesElapsedOfDayInUtc)
 }
 
 func (a *TransactionTemplatesApi) getOrderedFrequencyValues(frequencyValue string) string {
@@ -579,4 +569,13 @@ func (a *TransactionTemplatesApi) getOrderedFrequencyValues(frequencyValue strin
 	}
 
 	return sortedFrequencyValueBuilder.String()
+}
+
+// scheduleMinuteUTC preserves local wall time when legacy clients omit the new field.
+func scheduleMinuteUTC(minute *int16, offset int16, fallback int16) int16 {
+	local := fallback
+	if minute != nil {
+		local = *minute
+	}
+	return (local - offset + 1440) % 1440
 }

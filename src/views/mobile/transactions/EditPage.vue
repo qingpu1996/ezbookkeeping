@@ -278,6 +278,11 @@
                 </schedule-frequency-sheet>
             </f7-list-item>
 
+            <f7-list-input type="time" :label="tt('Scheduled Time')" :value="transaction.scheduledTime"
+                :readonly="mode === TransactionEditPageMode.View" :disabled="loading || submitting"
+                @input="transaction.scheduledTime = $event.target.value"
+                v-if="pageTypeAndMode?.type === TransactionEditPageType.Template && transaction instanceof TransactionTemplate && transaction.templateType === TemplateType.Schedule.type" />
+
             <f7-list-item
                 class="transaction-edit-datetime list-item-with-header-and-title"
                 link="#" no-chevron

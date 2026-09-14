@@ -85,6 +85,7 @@ type TransactionTemplateCreateRequest struct {
 	ScheduledFrequency         *string                           `json:"scheduledFrequency" binding:"omitempty"`
 	ScheduledStartDate         *string                           `json:"scheduledStartDate" binding:"omitempty"`
 	ScheduledEndDate           *string                           `json:"scheduledEndDate" binding:"omitempty"`
+	ScheduledMinute            *int16                            `json:"scheduledMinute" binding:"omitempty,min=0,max=1439"`
 	ScheduledTimezoneUtcOffset *int16                            `json:"utcOffset" binding:"omitempty,min=-720,max=840"`
 	ClientSessionId            string                            `json:"clientSessionId"`
 }
@@ -112,6 +113,7 @@ type TransactionTemplateModifyRequest struct {
 	ScheduledFrequency         *string                           `json:"scheduledFrequency" binding:"omitempty"`
 	ScheduledStartDate         *string                           `json:"scheduledStartDate" binding:"omitempty"`
 	ScheduledEndDate           *string                           `json:"scheduledEndDate" binding:"omitempty"`
+	ScheduledMinute            *int16                            `json:"scheduledMinute" binding:"omitempty,min=0,max=1439"`
 	ScheduledTimezoneUtcOffset *int16                            `json:"utcOffset" binding:"omitempty,min=-720,max=840"`
 }
 

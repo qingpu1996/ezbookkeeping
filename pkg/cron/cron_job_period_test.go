@@ -194,3 +194,27 @@ func TestCronJobNextRunTimeWithFixedTimePeriod(t *testing.T) {
 	err = scheduler.Shutdown()
 	assert.Nil(t, err)
 }
+
+func TestMinutePeriodSchedulesNextMinuteBoundary(t *testing.T) {
+	s, err := gocron.NewScheduler(gocron.WithLocation(time.UTC))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Shutdown()
+	p := CronJobEveryMinutePeriod{}
+	if p.GetInterval() != time.Minute {
+		t.Fatal("wrong interval")
+	}
+	j, err := s.NewJob(p.ToJobDefinition(), gocron.NewTask(func() {}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.Start()
+	next, err := j.NextRun()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if next.Second() != 0 || time.Until(next) > time.Minute+time.Second {
+		t.Fatal("not next minute", next)
+	}
+}

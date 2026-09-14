@@ -1,4 +1,5 @@
 {
+    "Scheduled Time": "Execution Time (transaction timezone)",
     "global": {
         "app": {
             "title": "ezBookkeeping"

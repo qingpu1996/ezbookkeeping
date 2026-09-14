@@ -272,6 +272,11 @@
                                         v-model:type="transaction.scheduledFrequencyType"
                                         v-model="transaction.scheduledFrequency" />
                                 </v-col>
+                                <v-col cols="12" md="6" v-if="type === TransactionEditPageType.Template && transaction instanceof TransactionTemplate && transaction.templateType === TemplateType.Schedule.type">
+                                    <v-text-field type="time" step="60" :label="tt('Scheduled Time')"
+                                        :readonly="mode === TransactionEditPageMode.View" :disabled="loading || submitting || recognizing"
+                                        v-model="transaction.scheduledTime" />
+                                </v-col>
                                 <v-col cols="12" md="6" v-if="type === TransactionEditPageType.Transaction || (type === TransactionEditPageType.Template && transaction instanceof TransactionTemplate && transaction.templateType === TemplateType.Schedule.type)">
                                     <v-autocomplete
                                         class="transaction-edit-timezone"

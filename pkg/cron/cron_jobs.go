@@ -23,9 +23,7 @@ var RemoveExpiredTokensJob = &CronJob{
 var CreateScheduledTransactionJob = &CronJob{
 	Name:        "CreateScheduledTransaction",
 	Description: "Periodically create transaction by scheduled transaction template.",
-	Period: CronJobEvery15MinutesPeriod{
-		Second: 0,
-	},
+	Period:      CronJobEveryMinutePeriod{},
 	Run: func(c *core.CronContext) error {
 		return services.Transactions.CreateScheduledTransactions(c, time.Now().Unix(), c.GetInterval())
 	},

@@ -77,3 +77,11 @@ func (p CronJobFixedTimePeriod) GetInterval() time.Duration {
 func (p CronJobFixedTimePeriod) ToJobDefinition() gocron.JobDefinition {
 	return gocron.OneTimeJob(gocron.OneTimeJobStartDateTime(p.Time))
 }
+
+// CronJobEveryMinutePeriod executes at the beginning of each minute.
+type CronJobEveryMinutePeriod struct{}
+
+func (p CronJobEveryMinutePeriod) GetInterval() time.Duration { return time.Minute }
+func (p CronJobEveryMinutePeriod) ToJobDefinition() gocron.JobDefinition {
+	return gocron.CronJob("0 * * * * *", true)
+}

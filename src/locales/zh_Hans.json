@@ -1,4 +1,5 @@
 {
+    "Scheduled Time": "执行时间（交易时区）",
     "global": {
         "app": {
             "title": "ezBookkeeping"
