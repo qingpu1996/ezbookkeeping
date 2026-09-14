@@ -16,10 +16,11 @@ type FundingPlanService struct{ ServiceUsingDB }
 var FundingPlans = &FundingPlanService{ServiceUsingDB{container: datastore.Container}}
 
 type FundingPlanRequest struct {
-	Currency   string   `json:"currency"`
-	Reserve    string   `json:"reserve"`
-	AccountIDs []string `json:"accountIds"`
-	Version    int64    `json:"version"`
+	ReserveBasisPoints int64    `json:"reserveBasisPoints"`
+	Currency           string   `json:"currency"`
+	Reserve            string   `json:"reserve"`
+	AccountIDs         []string `json:"accountIds"`
+	Version            int64    `json:"version"`
 }
 type FundingPlanResponse struct {
 	Configured bool `json:"configured"`
@@ -34,6 +35,7 @@ func readFundingPlan(sess *xorm.Session, uid int64) (*FundingPlanResponse, error
 	}
 	r := &FundingPlanResponse{Configured: found, FundingPlanRequest: FundingPlanRequest{AccountIDs: []string{}}}
 	if found {
+		r.ReserveBasisPoints = row.ReserveBasisPoints
 		r.Currency = row.Currency
 		r.Reserve = strconv.FormatInt(row.Reserve, 10)
 		r.Version = row.Version
@@ -49,7 +51,7 @@ func (s *FundingPlanService) Get(c core.Context, uid int64) (*FundingPlanRespons
 	return readFundingPlan(sess, uid)
 }
 func (s *FundingPlanService) Save(c core.Context, uid int64, req FundingPlanRequest) (*FundingPlanResponse, error) {
-	if !regexp.MustCompile(`^[A-Z]{3}$`).MatchString(req.Currency) || !regexp.MustCompile(`^(0|[1-9][0-9]{0,12})$`).MatchString(req.Reserve) || len(req.AccountIDs) > 1000 || req.Version < 0 {
+	if !regexp.MustCompile(`^[A-Z]{3}$`).MatchString(req.Currency) || !regexp.MustCompile(`^(0|[1-9][0-9]{0,12})$`).MatchString(req.Reserve) || len(req.AccountIDs) > 1000 || req.Version < 0 || req.ReserveBasisPoints < 0 || req.ReserveBasisPoints > 10000 {
 		return nil, errs.ErrFundingPlanInvalid
 	}
 	reserve, err := strconv.ParseInt(req.Reserve, 10, 64)
@@ -98,7 +100,7 @@ func (s *FundingPlanService) Save(c core.Context, uid int64, req FundingPlanRequ
 		if err != nil {
 			return err
 		}
-		row := &models.FundingPlan{Uid: uid, Currency: req.Currency, Reserve: reserve, AccountIDsJSON: string(encoded), Version: old.Version + 1}
+		row := &models.FundingPlan{ReserveBasisPoints: req.ReserveBasisPoints, Uid: uid, Currency: req.Currency, Reserve: reserve, AccountIDsJSON: string(encoded), Version: old.Version + 1}
 		if old.Configured {
 			_, err = sess.ID(uid).AllCols().Update(row)
 		} else {

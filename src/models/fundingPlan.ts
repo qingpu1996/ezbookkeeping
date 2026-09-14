@@ -1,7 +1,7 @@
 import type { AccountInfoResponse } from './account';
 import { AccountCategory } from '@/core/account';
 export interface FundingPlan {
- configured: boolean; currency: string; reserve: string; accountIds: string[]; version: number;
+ reserveBasisPoints: number; configured: boolean; currency: string; reserve: string; accountIds: string[]; version: number;
 }
 export function fundingLeaves(accounts: AccountInfoResponse[]): AccountInfoResponse[] {
  return accounts.flatMap(a => a.type === 2 ? (a.subAccounts || []).map(c => ({ ...c, name: `${a.name} / ${c.name}` })) : [a]);
@@ -19,7 +19,11 @@ export function fundingSummary(accounts: AccountInfoResponse[], plan: FundingPla
   if (!Number.isSafeInteger(a.balance)) throw new Error('账户余额超出可计算范围');
   if (selected.has(a.id)) included += BigInt(a.balance); else excluded += BigInt(a.balance);
  }
- const reserve = plan.configured ? BigInt(plan.reserve) : 0n;
+ const minimum = plan.configured ? BigInt(plan.reserve) : 0n;
+ const basisPoints = BigInt(plan.reserveBasisPoints ?? 0);
+ // Round up to the next cent so rounding never understates the reserve.
+ const proportional = ((included > 0n ? included : 0n) * basisPoints + 9999n) / 10000n;
+ const reserve = minimum > proportional ? minimum : proportional;
  const remainder = included - reserve;
- return { included, excluded, reserve, available: remainder > 0n ? remainder : 0n, shortfall: remainder < 0n ? -remainder : 0n, ready: plan.configured && !invalid, invalid };
+ return { included, excluded, minimum, proportional, reserve, available: remainder > 0n ? remainder : 0n, shortfall: remainder < 0n ? -remainder : 0n, ready: plan.configured && !invalid, invalid };
 }

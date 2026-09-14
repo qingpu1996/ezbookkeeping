@@ -43,7 +43,7 @@ func TestFundingPlanIsolationAndLedgerPreservation(t *testing.T) {
 	if err != nil || r.Configured || r.Version != 0 {
 		t.Fatal(r, err)
 	}
-	req := FundingPlanRequest{Currency: "CNY", Reserve: "1000000", AccountIDs: []string{"1"}}
+	req := FundingPlanRequest{ReserveBasisPoints: 3000, Currency: "CNY", Reserve: "1000000", AccountIDs: []string{"1"}}
 	for _, id := range []string{"2", "3", "4", "5", "6", "999", "01"} {
 		bad := req
 		bad.AccountIDs = []string{id}
@@ -56,6 +56,13 @@ func TestFundingPlanIsolationAndLedgerPreservation(t *testing.T) {
 		bad.Reserve = v
 		if _, err := FundingPlans.Save(c, 1, bad); err != errs.ErrFundingPlanInvalid {
 			t.Fatal("reserve", v, err)
+		}
+	}
+	for _, bp := range []int64{-1, 10001} {
+		bad := req
+		bad.ReserveBasisPoints = bp
+		if _, err := FundingPlans.Save(c, 1, bad); err != errs.ErrFundingPlanInvalid {
+			t.Fatal("ratio range", err)
 		}
 	}
 	var wg sync.WaitGroup
@@ -80,7 +87,7 @@ func TestFundingPlanIsolationAndLedgerPreservation(t *testing.T) {
 		t.Fatal(ok, conflict)
 	}
 	r, err = FundingPlans.Get(c, 1)
-	if err != nil || !r.Configured || r.Reserve != req.Reserve || len(r.AccountIDs) != 1 {
+	if err != nil || !r.Configured || r.ReserveBasisPoints != 3000 || r.Reserve != req.Reserve || len(r.AccountIDs) != 1 {
 		t.Fatal(r, err)
 	}
 	other, err := FundingPlans.Get(c, 2)
@@ -89,9 +96,10 @@ func TestFundingPlanIsolationAndLedgerPreservation(t *testing.T) {
 	}
 	req.Version = 1
 	req.Reserve = "0"
+	req.ReserveBasisPoints = 0
 	req.AccountIDs = []string{}
 	r, err = FundingPlans.Save(c, 1, req)
-	if err != nil || r.Reserve != "0" || len(r.AccountIDs) != 0 || r.Version != 2 {
+	if err != nil || r.ReserveBasisPoints != 0 || r.Reserve != "0" || len(r.AccountIDs) != 0 || r.Version != 2 {
 		t.Fatal(r, err)
 	}
 	if snapshot() != before {
