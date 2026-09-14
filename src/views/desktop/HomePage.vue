@@ -1,5 +1,6 @@
 <template>
     <v-row class="match-height">
+<v-col cols="12"><p v-if="valuationNote" role="status">{{ valuationNote }} <button @click="refreshValuations">刷新估值</button></p></v-col>
         <v-col cols="12" lg="4" md="12">
             <v-card :class="{ 'disabled': loadingOverview }">
                 <template #title>
@@ -235,6 +236,7 @@ const { tt, formatNumberToLocalizedNumerals } = useI18n();
 const {
     showAmountInHomePage,
     allAccounts,
+    valuationNote, refreshValuations,
     netAssets,
     totalAssets,
     totalLiabilities,

@@ -26,3 +26,22 @@ func TestQuoteProvenanceAndStaleness(t *testing.T) {
 		t.Fatalf("value %d %v", v, err)
 	}
 }
+
+func TestGenericQuoteAndExactGoldValue(t *testing.T) {
+	now := time.Now()
+	raw := []byte(fmt.Sprintf(`{"source":"operator gold feed","unit":"CNY/g","customerSell":"1045.67","fetchedAt":"%s"}`, now.Format(time.RFC3339Nano)))
+	q, err := ParseGenericGoldQuote(raw, now, 5*time.Minute)
+	if err != nil || q.CustomerSell != "1045.67" {
+		t.Fatal(err)
+	}
+	if _, err = ParseGenericGoldQuote(raw, now.Add(6*time.Minute), 5*time.Minute); err == nil {
+		t.Fatal("stale accepted")
+	}
+	if _, err = ParseGenericGoldQuote([]byte(strings.ReplaceAll(string(raw), "CNY/g", "USD/oz")), now, 5*time.Minute); err == nil {
+		t.Fatal("wrong unit accepted")
+	}
+	value, err := Value("29.3008", "1045.67")
+	if err != nil || value != 3063897 {
+		t.Fatal("exact cent rounding", value, err)
+	}
+}

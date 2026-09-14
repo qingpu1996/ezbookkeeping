@@ -77,7 +77,7 @@ func updateAllDatabaseTablesStructure(c *core.CliContext) error {
 
 	log.BootInfof(c, "[database.updateAllDatabaseTablesStructure] token record table maintained successfully")
 
-	err = datastore.Container.UserDataStore.SyncStructs(new(models.InvestmentPosition), new(models.InvestmentRevision), new(models.InvestmentPosting), new(models.InvestmentCommand), new(models.InvestmentAttachment))
+	err = datastore.Container.UserDataStore.SyncStructs(new(models.InvestmentPosition), new(models.InvestmentRevision), new(models.InvestmentPosting), new(models.InvestmentCommand), new(models.InvestmentAttachment), new(models.InvestmentValuationSetting))
 	if err != nil {
 		return err
 	}

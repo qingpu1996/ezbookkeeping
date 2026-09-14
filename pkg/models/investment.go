@@ -69,3 +69,15 @@ type InvestmentAttachment struct {
 	Extension   string `xorm:"VARCHAR(10) NOT NULL" json:"extension"`
 	RecordedAt  int64  `xorm:"NOT NULL" json:"recordedAt"`
 }
+
+// InvestmentValuationSetting changes display estimates only, never the cost ledger.
+type InvestmentValuationSetting struct {
+	PositionId    string `xorm:"VARCHAR(36) PK" json:"positionId"`
+	Uid           int64  `xorm:"INDEX NOT NULL" json:"-"`
+	Version       int64  `xorm:"NOT NULL" json:"version"`
+	Mode          string `xorm:"VARCHAR(16) NOT NULL" json:"mode"`
+	ManualPrice   string `xorm:"VARCHAR(40)" json:"manualPrice"`
+	ManualAsOf    int64  `json:"manualAsOf"`
+	MaxAgeMinutes int64  `json:"maxAgeMinutes"`
+	UpdatedAt     int64  `json:"updatedAt"`
+}

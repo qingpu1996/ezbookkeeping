@@ -1,3 +1,4 @@
+import { useInvestmentValuations } from '@/composables/useInvestmentValuations';
 import { ref, computed } from 'vue';
 
 import { useI18n } from '@/locales/helpers.ts';
@@ -38,22 +39,23 @@ export function useAccountListPageBase() {
     const useLastReconciledTime = computed(() => userStore.currentUserUseLastReconciledTime);
 
     const allAccounts = computed<Account[]>(() => accountsStore.allAccounts);
+    const { balances: displayBalances, note: valuationNote, refresh: refreshValuations } = useInvestmentValuations(allAccounts);
     const allCategorizedAccountsMap = computed<Record<number, CategorizedAccount>>(() => accountsStore.allCategorizedAccountsMap);
     const allAccountCount = computed<number>(() => accountsStore.allAvailableAccountsCount);
     const maxCategoryAccountCount = computed<number>(() => accountsStore.maxCategoryAccountCount);
 
     const netAssets = computed<string>(() => {
-        const netAssets: number | HiddenAmount | NumberWithSuffix = accountsStore.getNetAssets(showAccountBalance.value);
+        const netAssets: number | HiddenAmount | NumberWithSuffix = accountsStore.getNetAssets(showAccountBalance.value, displayBalances.value);
         return formatAmountToLocalizedNumeralsWithCurrency(netAssets, defaultCurrency.value);
     });
 
     const totalAssets = computed<string>(() => {
-        const totalAssets: number | HiddenAmount | NumberWithSuffix = accountsStore.getTotalAssets(showAccountBalance.value);
+        const totalAssets: number | HiddenAmount | NumberWithSuffix = accountsStore.getTotalAssets(showAccountBalance.value, displayBalances.value);
         return formatAmountToLocalizedNumeralsWithCurrency(totalAssets, defaultCurrency.value);
     });
 
     const totalLiabilities = computed<string>(() => {
-        const totalLiabilities: number | HiddenAmount | NumberWithSuffix = accountsStore.getTotalLiabilities(showAccountBalance.value);
+        const totalLiabilities: number | HiddenAmount | NumberWithSuffix = accountsStore.getTotalLiabilities(showAccountBalance.value, displayBalances.value);
         return formatAmountToLocalizedNumeralsWithCurrency(totalLiabilities, defaultCurrency.value);
     });
 
@@ -62,21 +64,21 @@ export function useAccountListPageBase() {
             return '';
         }
 
-        const totalBalance: number | HiddenAmount | NumberWithSuffix = accountsStore.getAccountCategoryTotalBalance(showAccountBalance.value, accountCategory);
+        const totalBalance: number | HiddenAmount | NumberWithSuffix = accountsStore.getAccountCategoryTotalBalance(showAccountBalance.value, accountCategory, displayBalances.value);
         return formatAmountToLocalizedNumeralsWithCurrency(totalBalance, defaultCurrency.value);
     }
 
     function accountBalance(account: Account, currentSubAccountId?: string): string | null {
         if (account.type === AccountType.SingleAccount.type) {
-            const balance: number| HiddenAmount | null = accountsStore.getAccountBalance(showAccountBalance.value, account);
+            const balance: number| HiddenAmount | null = accountsStore.getAccountBalance(showAccountBalance.value, account, displayBalances.value);
 
             if (!isNumber(balance) && !isString(balance)) {
                 return '';
             }
 
-            return formatAmountToLocalizedNumeralsWithCurrency(balance, account.currency);
+            return formatAmountToLocalizedNumeralsWithCurrency(balance, account.currency) + (account.investmentPositionId ? (displayBalances.value[account.id] !== undefined ? "（参考估值）" : "（成本）") : "");
         } else if (account.type === AccountType.MultiSubAccounts.type) {
-            const balanceResult = accountsStore.getAccountSubAccountBalance(showAccountBalance.value, showHidden.value, account, currentSubAccountId);
+            const balanceResult = accountsStore.getAccountSubAccountBalance(showAccountBalance.value, showHidden.value, account, currentSubAccountId, displayBalances.value);
 
             if (!isObject(balanceResult)) {
                 return '';
@@ -89,6 +91,7 @@ export function useAccountListPageBase() {
     }
 
     return {
+        valuationNote, refreshValuations,
         // states
         loading,
         showHidden,

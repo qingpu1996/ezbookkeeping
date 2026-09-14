@@ -4,7 +4,7 @@ export interface AccountGroup { id: string; name: string; version: number }
 export interface AccountGroupMember { accountId: string; groupId: string }
 export interface AccountGroupsResponse { groups: AccountGroup[]; members: AccountGroupMember[] }
 export interface GroupTotal { currency: string; assets: bigint; liabilities: bigint; net: bigint }
-export function groupTotals(accounts: AccountInfoResponse[], includeHidden = false, excluded: Record<string, boolean> = {}): GroupTotal[] {
+export function groupTotals(accounts: AccountInfoResponse[], includeHidden = false, excluded: Record<string, boolean> = {}, displayBalances: Record<string, number> = {}): GroupTotal[] {
     const totals = new Map<string, GroupTotal>();
     for (const root of accounts) {
         if ((!includeHidden && root.hidden) || excluded[root.id]) continue;
@@ -14,7 +14,7 @@ export function groupTotals(accounts: AccountInfoResponse[], includeHidden = fal
             if ((!includeHidden && leaf.hidden) || excluded[leaf.id]) continue;
             if (!Number.isSafeInteger(leaf.balance)) throw new Error('账户金额超出安全范围，暂不汇总');
             const total = totals.get(leaf.currency) || { currency: leaf.currency, assets: 0n, liabilities: 0n, net: 0n };
-            const amount = BigInt(leaf.balance);
+            const amount = BigInt(displayBalances[leaf.id] ?? leaf.balance);
             if (root.category === 3 || root.category === 5) total.liabilities -= amount;
             else total.assets += amount;
             total.net = total.assets - total.liabilities;

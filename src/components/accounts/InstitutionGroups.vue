@@ -2,10 +2,10 @@
     <section class="institution-groups" :aria-busy="busy">
         <header><div><p class="eyebrow">账户整理</p><h1>按机构看清你的钱</h1></div><button :disabled="busy" @click="reload">刷新</button></header>
         <p class="intro">把同一家银行或平台的账户放在一起。分组不记账，也不会改变余额、分类或黄金持仓。</p>
-        <p v-if="error" role="alert" class="error">{{ error }}</p><p v-if="message" role="status" class="message">{{ message }}</p>
+        <p v-if="valuationNote" role="status">{{ valuationNote }} <button @click="refreshValuations">刷新估值</button></p><p v-if="error" role="alert" class="error">{{ error }}</p><p v-if="message" role="status" class="message">{{ message }}</p>
         <form class="create-group" @submit.prevent="create"><label>新分组名称<input v-model="newName" maxlength="64" placeholder="例如：招商银行、支付宝" required :disabled="busy" /></label><button :disabled="busy || !newName.trim() || !loaded">创建分组</button></form>
         <label class="group-visibility"><input v-model="showHidden" type="checkbox" :disabled="busy" />显示隐藏账户并纳入本页汇总</label>
-        <p class="help">不同币种分别统计，不自动换汇。黄金显示账面成本，不是市值；净额不等于可投资资金。已设置“不计入总金额”的账户不计入本页汇总。</p>
+        <p class="help">不同币种分别统计，不自动换汇。黄金依据账户估值设置显示参考估值或成本；净额不等于可投资资金。已设置“不计入总金额”的账户不计入本页汇总。</p>
         <p v-if="!loaded && busy" role="status">正在读取账户与分组…</p>
         <template v-if="loaded">
             <article v-for="section in sections" :key="section.id" class="group-card">
@@ -14,8 +14,8 @@
                 <div v-for="total in section.totals" :key="total.currency" class="totals"><div><small>资产</small><strong>{{ groupMoney(total.assets, total.currency) }}</strong></div><div><small>负债</small><strong>{{ groupMoney(total.liabilities, total.currency) }}</strong></div><div><small>净额</small><strong>{{ groupMoney(total.net, total.currency) }}</strong></div></div>
                 <p v-if="!section.accounts.length" class="empty">{{ section.id ? '还没有账户。从下方“未分组”选择账户归属即可。' : '没有未分组账户。新增账户后会出现在这里。' }}</p>
                 <div v-for="account in section.accounts" :key="account.id" class="account-row">
-                    <div><h3><button class="account-open" @click="emit('openAccount', accountDestination(account))">{{ account.name }}</button><small v-if="account.hidden"> · 已隐藏</small></h3><p>{{ tt(AccountCategory.valueOf(account.category)?.name || '') }}<span v-if="account.investmentPositionId"> · 黄金成本账户</span><span v-if="excluded[account.id]"> · 不计入汇总</span></p>
-                        <strong v-if="account.type === 1">{{ accountMoney(account) }}</strong>
+                    <div><h3><button class="account-open" @click="emit('openAccount', accountDestination(account))">{{ account.name }}</button><small v-if="account.hidden"> · 已隐藏</small></h3><p>{{ tt(AccountCategory.valueOf(account.category)?.name || '') }}<span v-if="account.investmentPositionId"> · 黄金账户</span><span v-if="excluded[account.id]"> · 不计入汇总</span></p>
+                        <strong v-if="account.type === 1">{{ accountMoney(account) }}<small v-if="account.investmentPositionId"> · {{ displayBalances[account.id] !== undefined ? "参考估值" : "持仓成本" }}</small></strong>
                         <ul v-else><li v-for="child in visibleChildren(account)" :key="child.id"><button class="account-open" @click="emit('openAccount', accountDestination(child))">{{ child.name }}</button> · {{ accountMoney(child) }}<span v-if="child.hidden"> · 已隐藏</span><span v-if="excluded[child.id]"> · 不计入汇总</span></li></ul>
                     </div>
                     <form @submit.prevent="assign(account)"><label :for="'institution-' + account.id">机构归属<select :id="'institution-' + account.id" v-model="selected[account.id]" :disabled="busy"><option value="">未分组</option><option v-for="group in groups" :key="group.id" :value="group.id">{{ group.name }}</option></select></label><button :disabled="busy || selected[account.id] === membership[account.id]">保存归属</button><small v-if="account.type === 2">子账户随父账户一起移动</small></form>
@@ -26,6 +26,7 @@
 </template>
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import { useInvestmentValuations } from '@/composables/useInvestmentValuations';
 import { accountDestination } from '@/lib/account_navigation.ts';
 const emit = defineEmits<{ openAccount: [path: string] }>();
 import services from '@/lib/services.ts';
@@ -38,14 +39,15 @@ const { tt } = useI18n();
 const settings = useSettingsStore();
 const excluded = computed(() => settings.appSettings.totalAmountExcludeAccountIds);
 const groups = ref<AccountGroup[]>([]), accounts = ref<AccountInfoResponse[]>([]);
+const { balances: displayBalances, note: valuationNote, refresh: refreshValuations } = useInvestmentValuations(accounts);
 const membership = ref<Record<string, string>>({}), selected = ref<Record<string, string>>({}), names = ref<Record<string, string>>({});
 const busy = ref(false), loaded = ref(false), showHidden = ref(false), newName = ref(''), deleting = ref(''), error = ref(''), message = ref('');
 const sections = computed(() => [...groups.value.map(group => ({ id: group.id, name: group.name, group })), { id: '', name: '未分组', group: undefined }].map(section => {
     const list = accounts.value.filter(account => membership.value[account.id] === section.id && (showHidden.value || !account.hidden));
-    return { ...section, accounts: list, totals: groupTotals(list, showHidden.value, excluded.value) };
+    return { ...section, accounts: list, totals: groupTotals(list, showHidden.value, excluded.value, displayBalances.value) };
 }));
 function visibleChildren(account: AccountInfoResponse): AccountInfoResponse[] { return (account.subAccounts || []).filter(child => showHidden.value || !child.hidden); }
-function accountMoney(account: AccountInfoResponse): string { return groupMoney(BigInt(account.balance) * ((account.isLiability ?? AccountCategory.valueOf(account.category)?.isLiability) ? -1n : 1n), account.currency); }
+function accountMoney(account: AccountInfoResponse): string { return groupMoney(BigInt(displayBalances.value[account.id] ?? account.balance) * ((account.isLiability ?? AccountCategory.valueOf(account.category)?.isLiability) ? -1n : 1n), account.currency); }
 async function fetchData(): Promise<void> {
     const [groupResponse, accountResponse] = await Promise.all([services.getAccountGroups(), services.getAllAccounts({ visibleOnly: false })]);
     const nextGroups = groupResponse.data.result.groups;

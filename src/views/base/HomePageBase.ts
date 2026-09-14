@@ -1,3 +1,4 @@
+import { useInvestmentValuations } from '@/composables/useInvestmentValuations';
 import { computed } from 'vue';
 
 import { useI18n } from '@/locales/helpers.ts';
@@ -40,19 +41,20 @@ export function useHomePageBase() {
 
     const defaultCurrency = computed<string>(() => userStore.currentUserDefaultCurrency);
     const allAccounts = computed<Account[]>(() => accountsStore.allAccounts);
+    const { balances: displayBalances, note: valuationNote, refresh: refreshValuations } = useInvestmentValuations(allAccounts);
 
     const netAssets = computed<string>(() => {
-        const netAssets: number | HiddenAmount | NumberWithSuffix = accountsStore.getNetAssets(showAmountInHomePage.value);
+        const netAssets: number | HiddenAmount | NumberWithSuffix = accountsStore.getNetAssets(showAmountInHomePage.value, displayBalances.value);
         return formatAmountToLocalizedNumeralsWithCurrency(netAssets, defaultCurrency.value);
     });
 
     const totalAssets = computed<string>(() => {
-        const totalAssets: number | HiddenAmount | NumberWithSuffix = accountsStore.getTotalAssets(showAmountInHomePage.value);
+        const totalAssets: number | HiddenAmount | NumberWithSuffix = accountsStore.getTotalAssets(showAmountInHomePage.value, displayBalances.value);
         return formatAmountToLocalizedNumeralsWithCurrency(totalAssets, defaultCurrency.value);
     });
 
     const totalLiabilities = computed<string>(() => {
-        const totalLiabilities: number | HiddenAmount | NumberWithSuffix = accountsStore.getTotalLiabilities(showAmountInHomePage.value);
+        const totalLiabilities: number | HiddenAmount | NumberWithSuffix = accountsStore.getTotalLiabilities(showAmountInHomePage.value, displayBalances.value);
         return formatAmountToLocalizedNumeralsWithCurrency(totalLiabilities, defaultCurrency.value);
     });
 
@@ -95,6 +97,7 @@ export function useHomePageBase() {
     }
 
     return {
+        valuationNote, refreshValuations,
         // computed states
         showAmountInHomePage,
         defaultCurrency,

@@ -1,7 +1,7 @@
 <template>
     <section class="gold-ledger">
         <header><div><p class="eyebrow">账户 · 黄金详情</p><h1>{{ accountTitle || "把每一克记清楚" }}</h1></div><button :disabled="busy" @click="reload">刷新</button></header>
-        <p class="notice">这里记录已经发生的买卖，不执行交易。账户余额按成本统计；没有有效报价时不显示市值。</p>
+        <p class="notice">这里记录已经发生的买卖，不执行交易。持仓成本与参考估值分别展示；没有有效报价时明确按成本汇总。</p>
         <p v-if="error" role="alert" class="error">{{ error }}</p>
         <p v-if="message" role="status" class="notice">{{ message }}</p>
         <div v-if="!accountId" class="positions"><button v-for="p in positions" :key="p.id" :disabled="busy || !!pending" :class="{ selected: detail?.position.id === p.id }" @click="select(p.id)"><strong>{{ p.name }}</strong><span>{{ p.quantity }} 克</span><small>成本 ¥{{ investmentMoney(p.cost) }}</small></button></div>
@@ -10,7 +10,7 @@
         </details>
         <template v-if="detail">
             <div class="metrics"><article><small>持有数量</small><strong>{{ detail.position.quantity }} 克</strong></article><article><small>剩余成本</small><strong>¥{{ investmentMoney(detail.position.cost) }}</strong></article><article><small>已实现盈亏</small><strong>¥{{ investmentMoney(detail.position.realized) }}</strong></article></div><p>平均成本约 ¥{{ investmentAverage(detail.position.cost, detail.position.quantity) }} / 克（含买入手续费）</p>
-            <section class="panel"><h2>参考估值</h2><p v-if="!valuation">尚未读取行情，不影响记账。</p><template v-else-if="valuation.marketValue !== null"><p>参考市值 ¥{{ investmentMoney(valuation.marketValue) }} · 浮动盈亏 ¥{{ investmentMoney(valuation.unrealized || '0') }}</p><p>采集时间：{{ valuation.quote?.fetchedAt }} · MarketDay={{ valuation.quote?.marketDay }} · QuotedPrice={{ valuation.quote?.quotedPrice }}</p><p>按招行客户卖出参考价估算，最终成交以交易界面为准。银行原始 NowTime：{{ valuation.quote?.apiNowTime }}，不等于已确认的最后更新时间。</p></template><p v-else>{{ valuation.status === 'unconfigured' ? '行情通道尚未配置' : '行情暂不可用' }}，市值留空。</p><button :disabled="busy || !!pending" @click="readValuation">读取参考估值</button></section>
+            <GoldValuation :position="detail.position" :disabled="busy || !!pending" />
             <section class="panel"><h2>{{ form.operationId ? '更正已有记录' : '记录一笔' }}</h2>
                 <form @submit.prevent="preview">
                     <fieldset :disabled="busy || !!pending"><div class="fields">
@@ -37,7 +37,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import GoldValuation from './GoldValuation.vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import services from '@/lib/services.ts';
 import { isTransactionPicturesEnabled } from '@/lib/server_settings.ts';
 import type { AccountInfoResponse } from '@/models/account.ts';
@@ -46,7 +47,6 @@ import { investmentMinorUnits, investmentMoney, investmentAverage, type Investme
 const { accountId = '' } = defineProps<{ accountId?: string }>();
 const accountTitle = ref('');
 const pictureDialog = ref<HTMLDialogElement>(); const pictureURL = ref('');
-const valuation = ref<Awaited<ReturnType<typeof services.getInvestmentValuation>>['data']['result']>();
 const positions = ref<InvestmentPosition[]>([]), accounts = ref<AccountInfoResponse[]>([]), categories = ref<TransactionCategoryInfoResponse[]>([]);
 const detail = ref<InvestmentDetail>(), proposed = ref<InvestmentDetail>(), pending = ref<InvestmentRequest>();
 const busy = ref(false), error = ref(''), message = ref(''), uncertain = ref(false), newName = ref(''), newAccount = ref('');
@@ -72,8 +72,6 @@ async function save(): Promise<void> { if (!pending.value) return; await run(asy
 function cancelPreview(): void { if (uncertain.value) { error.value = '结果尚不确定，请先重试原请求确认是否入库。'; return; } pending.value = undefined; proposed.value = undefined; }
 function edit(op: InvestmentOperation): void { resetForm(); form.value = { ...blank(), ...op }; gross.value = investmentMoney(op.gross); fee.value = investmentMoney(op.fee); date.value = localDate(op.occurredAt * 1000); }
 async function cancelOperation(op: InvestmentOperation): Promise<void> { edit(op); await run(async () => { const req = { ...request(), cancelled: true }; proposed.value = (await services.previewInvestment(req)).data.result; pending.value = req; }); }
-watch(() => [detail.value?.position.id, detail.value?.position.version], () => { valuation.value = undefined; });
-async function readValuation(): Promise<void> { if (!detail.value) return; await run(async () => { const result = (await services.getInvestmentValuation(detail.value!.position.id)).data.result; if (result.positionVersion !== undefined && result.positionVersion !== detail.value!.position.version) throw new Error('持仓已变化，请刷新后重新读取行情'); valuation.value = result; }); }
 async function attach(event: Event, operationId: string): Promise<void> { const input = event.target as HTMLInputElement; const file = input.files?.[0]; if (!file || !detail.value) return; await run(async () => { const picture = (await services.uploadTransactionPicture({ pictureFile: file, clientSessionId: crypto.randomUUID() })).data.result; await services.attachInvestmentPicture({ positionId: detail.value!.position.id, operationId, pictureId: picture.pictureId }); detail.value = (await services.getInvestment(detail.value!.position.id)).data.result; message.value = '凭证已保存。'; }); input.value = ''; }
 async function viewPicture(id: string, extension: string): Promise<void> { await run(async () => { const data = (await services.readInvestmentPicture(id, extension)).data; if (pictureURL.value) URL.revokeObjectURL(pictureURL.value); pictureURL.value = URL.createObjectURL(data); pictureDialog.value?.showModal(); }); }
 onUnmounted(() => { if (pictureURL.value) URL.revokeObjectURL(pictureURL.value); });

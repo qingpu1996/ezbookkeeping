@@ -468,14 +468,14 @@ export const useAccountsStore = defineStore('accounts', () => {
         return null;
     }
 
-    function getNetAssets(showAccountBalance: boolean): number | HiddenAmount | NumberWithSuffix {
+    function getNetAssets(showAccountBalance: boolean, displayBalances: Record<string, number> = {}): number | HiddenAmount | NumberWithSuffix {
         if (!showAccountBalance) {
             return DISPLAY_HIDDEN_AMOUNT;
         }
 
         const accountsBalance = getAllFilteredAccountsBalance(allCategorizedAccountsMap.value, settingsStore.appSettings.accountCategoryOrders,
                 account => !(account.type === AccountType.SingleAccount.type && settingsStore.appSettings.totalAmountExcludeAccountIds[account.id])
-        );
+        , displayBalances);
         let netAssets = 0;
         let hasUnCalculatedAmount = false;
 
@@ -504,14 +504,14 @@ export const useAccountsStore = defineStore('accounts', () => {
         }
     }
 
-    function getTotalAssets(showAccountBalance: boolean): number | HiddenAmount | NumberWithSuffix {
+    function getTotalAssets(showAccountBalance: boolean, displayBalances: Record<string, number> = {}): number | HiddenAmount | NumberWithSuffix {
         if (!showAccountBalance) {
             return DISPLAY_HIDDEN_AMOUNT;
         }
 
         const accountsBalance = getAllFilteredAccountsBalance(allCategorizedAccountsMap.value, settingsStore.appSettings.accountCategoryOrders,
                 account => (account.isAsset || false) && !(account.type === AccountType.SingleAccount.type && settingsStore.appSettings.totalAmountExcludeAccountIds[account.id])
-        );
+        , displayBalances);
         let totalAssets = 0;
         let hasUnCalculatedAmount = false;
 
@@ -540,14 +540,14 @@ export const useAccountsStore = defineStore('accounts', () => {
         }
     }
 
-    function getTotalLiabilities(showAccountBalance: boolean): number | HiddenAmount | NumberWithSuffix {
+    function getTotalLiabilities(showAccountBalance: boolean, displayBalances: Record<string, number> = {}): number | HiddenAmount | NumberWithSuffix {
         if (!showAccountBalance) {
             return DISPLAY_HIDDEN_AMOUNT;
         }
 
         const accountsBalance = getAllFilteredAccountsBalance(allCategorizedAccountsMap.value, settingsStore.appSettings.accountCategoryOrders,
                 account => (account.isLiability || false) && !(account.type === AccountType.SingleAccount.type && settingsStore.appSettings.totalAmountExcludeAccountIds[account.id])
-        );
+        , displayBalances);
         let totalLiabilities = 0;
         let hasUnCalculatedAmount = false;
 
@@ -576,13 +576,13 @@ export const useAccountsStore = defineStore('accounts', () => {
         }
     }
 
-    function getAccountCategoryTotalBalance(showAccountBalance: boolean, accountCategory: AccountCategory): number | HiddenAmount | NumberWithSuffix {
+    function getAccountCategoryTotalBalance(showAccountBalance: boolean, accountCategory: AccountCategory, displayBalances: Record<string, number> = {}): number | HiddenAmount | NumberWithSuffix {
         if (!showAccountBalance) {
             return DISPLAY_HIDDEN_AMOUNT;
         }
 
         const accountsBalance = getAllFilteredAccountsBalance(allCategorizedAccountsMap.value, settingsStore.appSettings.accountCategoryOrders,
-                account => account.category === accountCategory.type);
+                account => account.category === accountCategory.type, displayBalances);
         let totalBalance = 0;
         let hasUnCalculatedAmount = false;
 
@@ -623,25 +623,25 @@ export const useAccountsStore = defineStore('accounts', () => {
         }
     }
 
-    function getAccountBalance(showAccountBalance: boolean, account: Account): number | HiddenAmount | null {
+    function getAccountBalance(showAccountBalance: boolean, account: Account, displayBalances: Record<string, number> = {}): number | HiddenAmount | null {
         if (account.type !== AccountType.SingleAccount.type) {
             return null;
         }
 
         if (showAccountBalance) {
             if (account.isAsset) {
-                return account.balance;
+                return displayBalances[account.id] ?? account.balance;
             } else if (account.isLiability) {
-                return -account.balance;
+                return -(displayBalances[account.id] ?? account.balance);
             } else {
-                return account.balance;
+                return displayBalances[account.id] ?? account.balance;
             }
         } else {
             return DISPLAY_HIDDEN_AMOUNT;
         }
     }
 
-    function getAccountSubAccountBalance(showAccountBalance: boolean, showHidden: boolean, account: Account, subAccountId?: string): AccountDisplayBalance | null {
+    function getAccountSubAccountBalance(showAccountBalance: boolean, showHidden: boolean, account: Account, subAccountId?: string, displayBalances: Record<string, number> = {}): AccountDisplayBalance | null {
         if (account.type !== AccountType.MultiSubAccounts.type) {
             return null;
         }
@@ -691,7 +691,7 @@ export const useAccountsStore = defineStore('accounts', () => {
             if (subAccountId) {
                 if (subAccountId === subAccount.id) {
                     return {
-                        balance: showAccountBalance ? getAccountBalance(showAccountBalance, subAccount) as number : DISPLAY_HIDDEN_AMOUNT,
+                        balance: showAccountBalance ? getAccountBalance(showAccountBalance, subAccount, displayBalances) as number : DISPLAY_HIDDEN_AMOUNT,
                         currency: subAccount.currency
                     };
                 }
@@ -699,14 +699,14 @@ export const useAccountsStore = defineStore('accounts', () => {
 
             if (subAccount.currency === resultCurrency) {
                 if (subAccount.isAsset) {
-                    totalBalance += subAccount.balance;
+                    totalBalance += displayBalances[subAccount.id] ?? subAccount.balance;
                 } else if (subAccount.isLiability) {
-                    totalBalance -= subAccount.balance;
+                    totalBalance -= displayBalances[subAccount.id] ?? subAccount.balance;
                 } else {
-                    totalBalance += subAccount.balance;
+                    totalBalance += displayBalances[subAccount.id] ?? subAccount.balance;
                 }
             } else {
-                const balance = exchangeRatesStore.getExchangedAmount(subAccount.balance, subAccount.currency, resultCurrency);
+                const balance = exchangeRatesStore.getExchangedAmount(displayBalances[subAccount.id] ?? subAccount.balance, subAccount.currency, resultCurrency);
 
                 if (!isNumber(balance)) {
                     hasUnCalculatedAmount = true;

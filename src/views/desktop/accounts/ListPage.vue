@@ -1,6 +1,7 @@
 <template>
     <v-row class="match-height">
         <v-col cols="12">
+        <p v-if="valuationNote" class="pa-3" role="status">{{ valuationNote }} <button type="button" @click="refreshValuations">刷新估值</button></p>
             <v-card>
                 <div class="pa-4"><router-link to="/account/groups">机构分组：银行与支付平台</router-link></div>
                 <v-layout>
@@ -396,6 +397,7 @@ const {
     allAccounts,
     allCategorizedAccountsMap,
     allAccountCount,
+    valuationNote, refreshValuations,
     netAssets,
     totalAssets,
     totalLiabilities,

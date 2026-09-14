@@ -2,6 +2,7 @@ package investments
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"io"
@@ -29,6 +30,8 @@ type GoldQuote struct {
 type CMBPlatformProvider struct {
 	Endpoint string
 	Token    string
+	Provider string
+	MaxAge   time.Duration
 }
 
 func (p CMBPlatformProvider) Fetch(ctx context.Context) (*GoldQuote, error) {
@@ -56,9 +59,22 @@ func (p CMBPlatformProvider) Fetch(ctx context.Context) (*GoldQuote, error) {
 	if err != nil || len(raw) > 2*1024*1024 {
 		return nil, errors.New("quote response exceeds limit")
 	}
-	return ParseCMBPlatformQuote(raw, time.Now())
+	age := p.MaxAge
+	if age <= 0 {
+		age = 30 * time.Minute
+	}
+	if p.Provider == "gold_json" {
+		return ParseGenericGoldQuote(raw, time.Now(), age)
+	}
+	if p.Provider != "" && p.Provider != "cmb_platform" {
+		return nil, errors.New("unsupported quote provider")
+	}
+	return parseCMBPlatformQuote(raw, time.Now(), age)
 }
 func ParseCMBPlatformQuote(raw []byte, now time.Time) (*GoldQuote, error) {
+	return parseCMBPlatformQuote(raw, now, 30*time.Minute)
+}
+func parseCMBPlatformQuote(raw []byte, now time.Time, maxAge time.Duration) (*GoldQuote, error) {
 	var response struct {
 		Observation struct {
 			Source  string `json:"source_id"`
@@ -89,8 +105,11 @@ func ParseCMBPlatformQuote(raw []byte, now time.Time) (*GoldQuote, error) {
 		return nil, errors.New("most recent collection did not succeed")
 	}
 	fetched, err := time.Parse(time.RFC3339Nano, o.Fetched)
-	if err != nil || now.Sub(fetched) > 30*time.Minute || fetched.After(now.Add(time.Minute)) {
+	if err != nil || now.Sub(fetched) > maxAge || fetched.After(now.Add(time.Minute)) {
 		return nil, errors.New("quote sample is stale or has an invalid time")
+	}
+	if _, err := hex.DecodeString(o.SHA); err != nil {
+		return nil, errors.New("invalid quote provenance hash")
 	}
 	price, err := Quantity(o.Data.Sell)
 	if err != nil || price.Sign() <= 0 {
@@ -118,4 +137,24 @@ func Value(quantity, unitPrice string) (int64, error) {
 		return 0, errors.New("valuation exceeds range")
 	}
 	return value.Int64(), nil
+}
+
+// Generic adapter contract for deployments without a CMB data platform.
+// The operator supplies a read-only endpoint; browser users cannot select network targets.
+func ParseGenericGoldQuote(raw []byte, now time.Time, maxAge time.Duration) (*GoldQuote, error) {
+	var q GoldQuote
+	if err := json.Unmarshal(raw, &q); err != nil {
+		return nil, errors.New("invalid quote response")
+	}
+	if q.Source == "" || len(q.Source) > 128 || q.Unit != "CNY/g" {
+		return nil, errors.New("invalid quote source or unit")
+	}
+	at, err := time.Parse(time.RFC3339Nano, q.FetchedAt)
+	if err != nil || now.Sub(at) > maxAge || at.After(now.Add(time.Minute)) {
+		return nil, errors.New("quote sample is stale or has an invalid time")
+	}
+	if _, err = Value("1", q.CustomerSell); err != nil {
+		return nil, err
+	}
+	return &q, nil
 }

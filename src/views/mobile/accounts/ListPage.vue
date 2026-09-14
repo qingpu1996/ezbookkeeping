@@ -13,6 +13,7 @@
                 <f7-link icon-f7="checkmark_alt" :class="{ 'disabled': displayOrderSaving || !displayOrderModified }" @click="saveSortResult" v-else-if="sortable"></f7-link>
             </f7-nav-right>
         </f7-navbar>
+        <p v-if="valuationNote" class="pa-3" role="status">{{ valuationNote }} <button type="button" @click="refreshValuations">刷新估值</button></p>
 
         <f7-card class="account-overview-card margin-top-half" :class="{ 'skeleton-text': loading }">
             <f7-card-header class="display-block" style="padding-top: 120px;">
@@ -259,6 +260,7 @@ const {
     allCategorizedAccountsMap,
     allAccountCount,
     maxCategoryAccountCount,
+    valuationNote, refreshValuations,
     netAssets,
     totalAssets,
     totalLiabilities,

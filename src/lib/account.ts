@@ -135,7 +135,7 @@ export function filterCategorizedAccounts(categorizedAccountsMap: Record<number,
     return ret;
 }
 
-export function getAllFilteredAccountsBalance(categorizedAccounts: Record<number, CategorizedAccount>, customAccountCategoryOrder: string, accountFilter: (account: Account) => boolean): AccountBalance[] {
+export function getAllFilteredAccountsBalance(categorizedAccounts: Record<number, CategorizedAccount>, customAccountCategoryOrder: string, accountFilter: (account: Account) => boolean, displayBalances: Record<string, number> = {}): AccountBalance[] {
     const allAccountCategories = AccountCategory.values(customAccountCategoryOrder);
     const ret: AccountBalance[] = [];
 
@@ -153,7 +153,7 @@ export function getAllFilteredAccountsBalance(categorizedAccounts: Record<number
 
             if (account.type === AccountType.SingleAccount.type) {
                 ret.push({
-                    balance: account.balance,
+                    balance: displayBalances[account.id] ?? account.balance,
                     isAsset: !!account.isAsset,
                     isLiability: !!account.isLiability,
                     currency: account.currency
@@ -165,7 +165,7 @@ export function getAllFilteredAccountsBalance(categorizedAccounts: Record<number
                     }
 
                     ret.push({
-                        balance: subAccount.balance,
+                        balance: displayBalances[subAccount.id] ?? subAccount.balance,
                         isAsset: !!subAccount.isAsset,
                         isLiability: !!subAccount.isLiability,
                         currency: subAccount.currency

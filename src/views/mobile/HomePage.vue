@@ -3,6 +3,7 @@
         <f7-navbar>
             <f7-nav-title :title="tt('global.app.title')"></f7-nav-title>
         </f7-navbar>
+<p v-if="valuationNote" class="padding" role="status">{{ valuationNote }} <button @click="refreshValuations">刷新估值</button></p>
 
         <f7-card class="home-summary-card no-margin-top" :class="{ 'skeleton-text': loading }">
             <f7-card-header class="display-block" style="padding-top: 120px;">
@@ -261,6 +262,7 @@ const { tt } = useI18n();
 const { showToast } = useI18nUIComponents();
 
 const {
+    valuationNote, refreshValuations,
     showAmountInHomePage,
     displayDateRange,
     transactionOverview,

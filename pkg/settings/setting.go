@@ -431,6 +431,9 @@ type Config struct {
 	EnableUserForceVerifyEmail    bool
 	EnableTransactionPictures     bool
 	MaxTransactionPictureFileSize uint32
+	InvestmentQuoteProvider       string
+	InvestmentQuoteName           string
+	InvestmentQuoteMaxAgeMinutes  uint32
 	InvestmentQuoteURL            string
 	InvestmentQuoteToken          string
 	EnableInvestmentAssets        bool
@@ -1147,6 +1150,12 @@ func loadUserConfiguration(config *Config, configFile *ini.File, sectionName str
 	config.EnableUserForceVerifyEmail = getConfigItemBoolValue(configFile, sectionName, "enable_force_email_verify", false)
 	config.EnableTransactionPictures = getConfigItemBoolValue(configFile, sectionName, "enable_transaction_picture", false)
 	config.MaxTransactionPictureFileSize = getConfigItemUint32Value(configFile, sectionName, "max_transaction_picture_size", defaultTransactionPictureFileMaxSize)
+	config.InvestmentQuoteProvider = getConfigItemStringValue(configFile, sectionName, "investment_quote_provider", "cmb_platform")
+	config.InvestmentQuoteName = getConfigItemStringValue(configFile, sectionName, "investment_quote_name", "Gold reference")
+	config.InvestmentQuoteMaxAgeMinutes = getConfigItemUint32Value(configFile, sectionName, "investment_quote_max_age_minutes", 30)
+	if config.InvestmentQuoteMaxAgeMinutes < 1 || config.InvestmentQuoteMaxAgeMinutes > 10080 {
+		return errs.ErrInvestmentInvalid
+	}
 	config.InvestmentQuoteURL = getConfigItemStringValue(configFile, sectionName, "investment_quote_url", "")
 	config.InvestmentQuoteToken = getConfigItemStringValue(configFile, sectionName, "investment_quote_token", "")
 	config.EnableInvestmentAssets = getConfigItemBoolValue(configFile, sectionName, "enable_investment_assets", false)
