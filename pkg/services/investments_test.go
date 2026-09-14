@@ -266,3 +266,78 @@ func TestInvestmentAtomicLifecycle(t *testing.T) {
 		t.Fatalf("cross-user: %v", err)
 	}
 }
+
+// Ordinary cash transactions must coexist with investment postings whose related
+// transaction ID is zero (opening balances and realized profit/loss).
+func TestInvestmentOrdinaryCashTransactionsAfterSell(t *testing.T) {
+	c := setupInvestmentTest(t)
+	p, err := Investments.Create(c, 1, InvestmentCreateRequest{RequestKey: "regress-create", Name: "gold", CostAccountId: 2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now().Unix() - 500
+	d, err := Investments.Apply(c, 1, InvestmentOperationRequest{RequestKey: "regress-opening", PositionId: p.Id, ExpectedVersion: 1, Kind: "opening", OccurredAt: now, Quantity: "10", Gross: 900000}, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = Investments.Apply(c, 1, InvestmentOperationRequest{RequestKey: "regress-sell", PositionId: p.Id, ExpectedVersion: d.Position.Version, Kind: "sell", OccurredAt: now + 1, Quantity: "1", Gross: 100000, Fee: 100, CashAccountId: 1, TransferCategoryId: 11, IncomeCategoryId: 21, ExpenseCategoryId: 31}, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sess := Investments.UserDataDB(1).NewSession(c)
+	_, err = sess.Insert(&models.Account{AccountId: 3, Uid: 1, Name: "new cash", Type: models.ACCOUNT_TYPE_SINGLE_ACCOUNT, Category: models.ACCOUNT_CATEGORY_CASH, Currency: "CNY"})
+	sess.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, ids := range [][]int64{nil, {0}, {-1, 0}} {
+		if err := Investments.GuardTransactions(c, 1, ids); err != nil {
+			t.Fatalf("sentinel IDs %v: %v", ids, err)
+		}
+	}
+	for i, kind := range []models.TransactionDbType{models.TRANSACTION_DB_TYPE_INCOME, models.TRANSACTION_DB_TYPE_EXPENSE, models.TRANSACTION_DB_TYPE_TRANSFER_OUT} {
+		beforeCash, beforeOther := investmentBalance(t, c, 1), investmentBalance(t, c, 3)
+		tx := &models.Transaction{Uid: 1, AccountId: 1, Type: kind, Amount: 1234, CategoryId: 21, TransactionTime: utils.GetMinTransactionTimeFromUnixTime(now + 10 + int64(i))}
+		delta := int64(1234)
+		if kind == models.TRANSACTION_DB_TYPE_EXPENSE {
+			tx.CategoryId = 31
+			delta = -1234
+		}
+		if kind == models.TRANSACTION_DB_TYPE_TRANSFER_OUT {
+			tx.CategoryId = 11
+			tx.RelatedAccountId = 3
+			tx.RelatedAccountAmount = 1234
+			delta = -1234
+		}
+		if err := Transactions.CreateTransaction(c, tx, nil, nil); err != nil {
+			t.Fatalf("ordinary kind %v: %v", kind, err)
+		}
+		if investmentBalance(t, c, 1) != beforeCash+delta {
+			t.Fatal("incorrect cash balance")
+		}
+		if err := Investments.GuardTransactions(c, 1, []int64{0, tx.TransactionId, -1}); err != nil {
+			t.Fatalf("ordinary ID with sentinel: %v", err)
+		}
+		if err := Transactions.DeleteTransaction(c, 1, tx.TransactionId); err != nil {
+			t.Fatal(err)
+		}
+		if investmentBalance(t, c, 1) != beforeCash || investmentBalance(t, c, 3) != beforeOther {
+			t.Fatal("delete failed to restore balances")
+		}
+	}
+	sess = Investments.UserDataDB(1).NewSession(c)
+	var link models.InvestmentPosting
+	found, err := sess.Where("uid=? AND active=? AND related_transaction_id=?", 1, true, 0).Get(&link)
+	sess.Close()
+	if err != nil || !found {
+		t.Fatalf("missing zero-related investment posting: %v", err)
+	}
+	for _, ids := range [][]int64{{link.TransactionId}, {0, link.TransactionId, -1}} {
+		if err := Investments.GuardTransactions(c, 1, ids); err != errs.ErrInvestmentProtected {
+			t.Fatalf("investment protection lost: %v", err)
+		}
+	}
+	if err := Transactions.DeleteTransaction(c, 1, link.TransactionId); err != errs.ErrInvestmentProtected {
+		t.Fatalf("investment delete protection lost: %v", err)
+	}
+}

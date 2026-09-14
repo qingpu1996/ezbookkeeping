@@ -39,6 +39,16 @@ func guardInvestmentAccounts(sess *xorm.Session, uid int64, ids []int64) error {
 	return nil
 }
 func guardInvestmentTransaction(sess *xorm.Session, uid int64, ids []int64) error {
+	// Zero is the unset related ID on ordinary transactions and investment
+	// postings. It must never participate in ownership matching. Keep a new
+	// slice so callers retain their original IDs.
+	validIDs := make([]int64, 0, len(ids))
+	for _, id := range ids {
+		if id > 0 {
+			validIDs = append(validIDs, id)
+		}
+	}
+	ids = validIDs
 	if len(ids) == 0 {
 		return nil
 	}
