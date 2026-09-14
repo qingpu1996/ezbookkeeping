@@ -30,7 +30,7 @@ func setupInvestmentTest(t *testing.T) core.Context {
 	if err := uuid.InitializeUuidGenerator(config); err != nil {
 		t.Fatal(err)
 	}
-	if err := datastore.Container.UserDataStore.SyncStructs(new(models.User), new(models.Account), new(models.Transaction), new(models.TransactionCategory), new(models.TransactionTagIndex), new(models.TransactionTag), new(models.TransactionPictureInfo), new(models.InvestmentPosition), new(models.InvestmentRevision), new(models.InvestmentPosting), new(models.InvestmentCommand), new(models.InvestmentDefinition), new(models.InvestmentDefinitionBinding), new(models.InvestmentAttachment)); err != nil {
+	if err := datastore.Container.UserDataStore.SyncStructs(new(models.User), new(models.Account), new(models.Transaction), new(models.TransactionCategory), new(models.TransactionTagIndex), new(models.TransactionTag), new(models.TransactionPictureInfo), new(models.InvestmentPosition), new(models.InvestmentRevision), new(models.InvestmentPosting), new(models.InvestmentCommand), new(models.InvestmentDefinition), new(models.InvestmentPurchaseCategory), new(models.InvestmentDefinitionBinding), new(models.InvestmentAttachment)); err != nil {
 		t.Fatal(err)
 	}
 	c := core.NewNullContext()
@@ -339,5 +339,59 @@ func TestInvestmentOrdinaryCashTransactionsAfterSell(t *testing.T) {
 	}
 	if err := Transactions.DeleteTransaction(c, 1, link.TransactionId); err != errs.ErrInvestmentProtected {
 		t.Fatalf("investment delete protection lost: %v", err)
+	}
+}
+
+func TestInvestmentPurchaseCategoryAtomic(t *testing.T) {
+	c := setupInvestmentTest(t)
+	p, err := Investments.Create(c, 1, InvestmentCreateRequest{RequestKey: "purchase-create-1", Name: "purchase gold", CostAccountId: 2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	req := InvestmentOperationRequest{RequestKey: "purchase-save-01", PositionId: p.Id, ExpectedVersion: 1, Kind: "buy", OccurredAt: time.Now().Unix() - 10, Quantity: "0.5", Gross: 50000, Fee: 50, CashAccountId: 1, EntryPurpose: InvestmentPurchasePurpose, AssetDefinitionId: "gold-1"}
+	count := func(bean interface{}) int64 {
+		sess := Investments.UserDataDB(1).NewSession(c)
+		defer sess.Close()
+		n, e := sess.Count(bean)
+		if e != nil {
+			t.Fatal(e)
+		}
+		return n
+	}
+	before := count(new(models.TransactionCategory))
+	for i := 0; i < 2; i++ {
+		if _, err = Investments.Apply(c, 1, req, true); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if count(new(models.InvestmentPurchaseCategory)) != 0 || count(new(models.TransactionCategory)) != before || investmentBalance(t, c, 1) != 2000000 || investmentBalance(t, c, 2) != 0 {
+		t.Fatal("preview persisted changes")
+	}
+	bad := req
+	bad.AssetDefinitionId = "wrong-definition"
+	if _, err = Investments.Apply(c, 1, bad, false); err == nil {
+		t.Fatal("accepted wrong asset")
+	}
+	bad = req
+	bad.EntryPurpose = "unknown"
+	if _, err = Investments.Apply(c, 1, bad, false); err == nil {
+		t.Fatal("accepted unknown purpose")
+	}
+	for i := 0; i < 2; i++ {
+		if _, err = Investments.Apply(c, 1, req, false); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if count(new(models.InvestmentPurchaseCategory)) != 1 || count(new(models.TransactionCategory)) != before+2 || investmentBalance(t, c, 1) != 1949950 || investmentBalance(t, c, 2) != 50050 {
+		t.Fatal("purchase did not post exactly once")
+	}
+	sess := Investments.UserDataDB(1).NewSession(c)
+	defer sess.Close()
+	n, err := sess.Where("type=?", models.TRANSACTION_TYPE_EXPENSE).Count(new(models.Transaction))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != 0 {
+		t.Fatal("principal posted as consumption")
 	}
 }

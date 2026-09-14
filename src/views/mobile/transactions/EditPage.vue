@@ -1,36 +1,34 @@
 <template>
     <f7-page @page:afterin="onPageAfterIn" @page:beforeout="onPageBeforeOut">
         <f7-navbar>
-            <f7-nav-left :class="{ 'disabled': loading || assetLocked }" :back-link="tt('Back')"></f7-nav-left>
+            <f7-nav-left :class="{ 'disabled': loading || purchase.locked }" :back-link="tt('Back')"></f7-nav-left>
             <f7-nav-title :title="tt(title)"></f7-nav-title>
-            <f7-nav-right :class="{ 'navbar-compact-icons': true, 'disabled': loading }" v-if="!assetEntry && (mode !== TransactionEditPageMode.View || transaction.type !== TransactionType.ModifyBalance)">
-                <f7-link icon-f7="ellipsis" @click="showMoreActionSheet = true"></f7-link>
-                <f7-link icon-f7="checkmark_alt" :class="{ 'disabled': inputIsEmpty || submitting || recognizing }" @click="save(AfterSaveAction.GoBack)" v-if="mode !== TransactionEditPageMode.View"></f7-link>
+            <f7-nav-right :class="{ 'navbar-compact-icons': true, 'disabled': loading }" v-if="(mode !== TransactionEditPageMode.View || transaction.type !== TransactionType.ModifyBalance)">
+                <f7-link icon-f7="ellipsis" :class="{ disabled: purchase.locked }" @click="showMoreActionSheet = true"></f7-link>
+                <f7-link icon-f7="checkmark_alt" :class="{ 'disabled': inputIsEmpty || submitting || recognizing || purchase.busy }" @click="save(AfterSaveAction.GoBack)" v-if="mode !== TransactionEditPageMode.View"></f7-link>
             </f7-nav-right>
         </f7-navbar>
 
-        <f7-block :class="{ 'subnav-segmented-bar': true, 'disabled': loading || assetLocked }">
+        <f7-block :class="{ 'subnav-segmented-bar': true, 'disabled': loading || purchase.locked }">
             <f7-segmented strong round :class="{ 'readonly': pageTypeAndMode?.type === TransactionEditPageType.Transaction && mode !== TransactionEditPageMode.Add && mode !== TransactionEditPageMode.Edit }">
-                <f7-button round :text="tt('Expense')" :active="!assetEntry && transaction.type === TransactionType.Expense"
+                <f7-button round :text="tt('Expense')" :active="transaction.type === TransactionType.Expense"
                            :disabled="pageTypeAndMode?.type === TransactionEditPageType.Transaction && mode !== TransactionEditPageMode.Add && mode !== TransactionEditPageMode.Edit && transaction.type !== TransactionType.Expense"
                            v-if="transaction.type !== TransactionType.ModifyBalance"
-                           @click="assetEntry=false;transaction.type = TransactionType.Expense"></f7-button>
-                <f7-button round :text="tt('Income')" :active="!assetEntry && transaction.type === TransactionType.Income"
+                           @click="transaction.type = TransactionType.Expense"></f7-button>
+                <f7-button round :text="tt('Income')" :active="transaction.type === TransactionType.Income"
                            :disabled="pageTypeAndMode?.type === TransactionEditPageType.Transaction && mode !== TransactionEditPageMode.Add && mode !== TransactionEditPageMode.Edit && transaction.type !== TransactionType.Income"
                            v-if="transaction.type !== TransactionType.ModifyBalance"
-                           @click="assetEntry=false;transaction.type = TransactionType.Income"></f7-button>
-                <f7-button round :text="tt('Transfer')" :active="!assetEntry && transaction.type === TransactionType.Transfer"
+                           @click="transaction.type = TransactionType.Income"></f7-button>
+                <f7-button round :text="tt('Transfer')" :active="transaction.type === TransactionType.Transfer"
                            :disabled="pageTypeAndMode?.type === TransactionEditPageType.Transaction && mode !== TransactionEditPageMode.Add && mode !== TransactionEditPageMode.Edit && transaction.type !== TransactionType.Transfer"
                            v-if="transaction.type !== TransactionType.ModifyBalance"
-                           @click="assetEntry=false;transaction.type = TransactionType.Transfer"></f7-button>
+                           @click="transaction.type = TransactionType.Transfer"></f7-button>
                 <f7-button round :text="tt('Modify Balance')" :active="transaction.type === TransactionType.ModifyBalance"
                            v-if="pageTypeAndMode?.type === TransactionEditPageType.Transaction && transaction.type === TransactionType.ModifyBalance"></f7-button>
-<f7-button round text="资产买卖" :active="assetEntry" :disabled="submitting || recognizing" v-if="pageTypeAndMode?.type === TransactionEditPageType.Transaction && mode === TransactionEditPageMode.Add && isInvestmentAssetsEnabled()" @click="assetOpened=true;assetEntry=true"/>
             </f7-segmented>
         </f7-block>
 
-        <GoldLedger v-if="assetOpened" v-show="assetEntry" trade-only @lock="assetLocked=$event"/>
-        <template v-if="!assetEntry">
+        <div :inert="purchase.locked || undefined">
         <f7-list strong inset dividers class="margin-vertical-half skeleton-text" v-if="loading">
             <f7-list-input label="Template Name" placeholder="Template Name" v-if="pageTypeAndMode?.type === TransactionEditPageType.Template"></f7-list-input>
             <f7-list-item
@@ -132,6 +130,8 @@
                                            v-model="transaction.expenseCategoryId">
                 </tree-view-selection-sheet>
             </f7-list-item>
+
+            <f7-list-item v-if="purchase.active"><AssetPurchaseFields :form="purchase" /></f7-list-item>
 
             <f7-list-item
                 class="list-item-with-header-and-title list-item-title-hide-overflow"
@@ -489,17 +489,18 @@
             </f7-actions-group>
         </f7-actions>
 
-        </template>
-        <template #fixed v-if="!assetEntry && (quickSaveButtonStyleType === TransactionQuickSaveButtonStyle.BottomLeftFloating.type || quickSaveButtonStyleType === TransactionQuickSaveButtonStyle.BottomCenterFloating.type || quickSaveButtonStyleType === TransactionQuickSaveButtonStyle.BottomRightFloating.type)">
-            <f7-fab id="quick-save-button" :class="{ 'disabled': inputIsEmpty || submitting || recognizing }" :position="quickSaveButtonFloatingPosition"
-                    :text="tt(quickSaveButtonTitle)"
+        </div>
+        <f7-block v-if="purchase.active"><AssetPurchaseFields :form="purchase" confirmation /></f7-block>
+        <template #fixed v-if="(quickSaveButtonStyleType === TransactionQuickSaveButtonStyle.BottomLeftFloating.type || quickSaveButtonStyleType === TransactionQuickSaveButtonStyle.BottomCenterFloating.type || quickSaveButtonStyleType === TransactionQuickSaveButtonStyle.BottomRightFloating.type)">
+            <f7-fab id="quick-save-button" :class="{ 'disabled': inputIsEmpty || submitting || recognizing || purchase.busy }" :position="quickSaveButtonFloatingPosition"
+                    :text="(purchase.active ? (purchase.pending ? '确认买入' : '核对买入') : tt(quickSaveButtonTitle))"
                     @click="quickSave" v-if="mode !== TransactionEditPageMode.View">
             </f7-fab>
         </template>
 
-        <f7-toolbar id="quick-save-button" class="compact-tabbar" tabbar bottom v-if="!assetEntry && quickSaveButtonStyleType === TransactionQuickSaveButtonStyle.BottomFixed.type && mode !== TransactionEditPageMode.View">
-            <f7-link :class="{ 'disabled': inputIsEmpty || submitting || recognizing }" @click="quickSave">
-                <span class="tabbar-primary-link">{{ tt(quickSaveButtonTitle) }}</span>
+        <f7-toolbar id="quick-save-button" class="compact-tabbar" tabbar bottom v-if="quickSaveButtonStyleType === TransactionQuickSaveButtonStyle.BottomFixed.type && mode !== TransactionEditPageMode.View">
+            <f7-link :class="{ 'disabled': inputIsEmpty || submitting || recognizing || purchase.busy }" @click="quickSave">
+                <span class="tabbar-primary-link">{{ (purchase.active ? (purchase.pending ? '确认买入' : '核对买入') : tt(quickSaveButtonTitle)) }}</span>
             </f7-link>
         </f7-toolbar>
 
@@ -527,10 +528,11 @@
 </template>
 
 <script setup lang="ts">
-import GoldLedger from '@/components/investments/GoldLedger.vue';
+import AssetPurchaseFields from '@/components/investments/AssetPurchaseFields.vue';
+import {useAssetPurchase} from '@/composables/useAssetPurchase';
 import {isInvestmentAssetsEnabled} from '@/lib/server_settings';
 import { ref, computed, useTemplateRef } from 'vue';
-const assetEntry=ref(false),assetOpened=ref(false),assetLocked=ref(false);
+
 import type { PhotoBrowser, Router } from 'framework7/types';
 
 import { useI18n } from '@/locales/helpers.ts';
@@ -633,10 +635,10 @@ const {
     allTimezones,
     allVisibleAccounts,
     allVisibleCategorizedAccounts,
-    allCategories,
+    allCategories: ordinaryCategories,
     allTagsMap,
     firstVisibleAccountId,
-    hasVisibleExpenseCategories,
+    hasVisibleExpenseCategories: ordinaryHasVisibleExpenseCategories,
     hasVisibleIncomeCategories,
     hasVisibleTransferCategories,
     canAddTransactionPicture,
@@ -664,6 +666,11 @@ const {
     getDisplayAmount,
     getTransactionPictureUrl
 } = useTransactionEditPageBase(pageTypeAndMode?.type || TransactionEditPageType.Transaction, pageTypeAndMode?.mode, query['type'] ? parseInt(query['type']) : undefined);
+const purchaseEnabled = computed(() => pageTypeAndMode?.type === TransactionEditPageType.Transaction && mode.value === TransactionEditPageMode.Add && isInvestmentAssetsEnabled());
+const purchase = useAssetPurchase(transaction, purchaseEnabled);
+const allCategories = computed<typeof ordinaryCategories.value>(() => ({...ordinaryCategories.value, [CategoryType.Expense]: purchaseEnabled.value ? [purchase.category, ...(ordinaryCategories.value[CategoryType.Expense] || [])] : (ordinaryCategories.value[CategoryType.Expense] || [])}));
+const hasVisibleExpenseCategories = computed(() => ordinaryHasVisibleExpenseCategories.value || (purchaseEnabled.value && purchase.definitions.length > 0));
+
 
 const isSupportClipboard = !!navigator.clipboard;
 
@@ -1100,7 +1107,12 @@ function init(): void {
 }
 
 function save(afterAction: AfterSaveAction): void {
-    if (assetEntry.value) return;
+    if (purchase.active) {
+        void purchase.submit().then(async saved => { if (saved) {
+            try { await transactionCategoriesStore.loadAllCategories({force:true}); } catch { /* Entry is already saved. */ }
+            submitted.value = true; transactionsStore.clearTransactionDraft(); showToast('You have added a new transaction'); props.f7router.back();
+        } }); return;
+    }
     const router = props.f7router;
 
     if (mode.value === TransactionEditPageMode.View) {
@@ -1216,6 +1228,7 @@ function save(afterAction: AfterSaveAction): void {
 }
 
 function quickSave(): void {
+    if (purchase.active) { save(AfterSaveAction.GoBack); return; }
     if (mode.value === TransactionEditPageMode.View) {
         return;
     }
@@ -1239,7 +1252,7 @@ function quickSave(): void {
 }
 
 function recognizeText(text: string): void {
-    if (assetEntry.value) return;
+    if (purchase.active || purchase.locked) return;
     if (recognizing.value || loading.value || submitting.value) {
         return;
     }
@@ -1266,7 +1279,7 @@ function recognizeText(text: string): void {
 }
 
 function recognizeFromClipboard(): void {
-    if (assetEntry.value) return;
+    if (purchase.active || purchase.locked) return;
     if (recognizing.value || loading.value || submitting.value) {
         return;
     }
@@ -1470,7 +1483,7 @@ function onPageAfterIn(): void {
 }
 
 function onPageBeforeOut(): void {
-    if (submitted.value || pageTypeAndMode?.type !== TransactionEditPageType.Transaction || mode.value !== TransactionEditPageMode.Add || query['noTransactionDraft'] === 'true' || addByTemplateId.value || duplicateFromId.value) {
+    if (purchase.active || submitted.value || pageTypeAndMode?.type !== TransactionEditPageType.Transaction || mode.value !== TransactionEditPageMode.Add || query['noTransactionDraft'] === 'true' || addByTemplateId.value || duplicateFromId.value) {
         return;
     }
 

@@ -51,6 +51,8 @@ type InvestmentCreateRequest struct {
 	CostAccountId int64  `json:"costAccountId,string"`
 }
 type InvestmentOperationRequest struct {
+	EntryPurpose       string `json:"entryPurpose,omitempty"`
+	AssetDefinitionId  string `json:"assetDefinitionId,omitempty"`
 	RequestKey         string `json:"requestKey"`
 	PositionId         string `json:"positionId"`
 	ExpectedVersion    int64  `json:"expectedVersion"`
@@ -305,6 +307,12 @@ func (s *InvestmentService) Apply(c core.Context, uid int64, req InvestmentOpera
 		return nil, errs.ErrUserIdInvalid
 	}
 	var result InvestmentDetail
+	if req.EntryPurpose != "" && req.EntryPurpose != InvestmentPurchasePurpose {
+		return nil, errs.ErrInvestmentInvalid
+	}
+	if req.EntryPurpose == InvestmentPurchasePurpose && (req.Kind != "buy" || req.OperationId != "" || req.Cancelled || req.TransferCategoryId != 0 || req.AssetDefinitionId == "") {
+		return nil, errs.ErrInvestmentInvalid
+	}
 	hash := commandHash("apply", req)
 	db := s.UserDataDB(uid)
 	err := db.DoTransaction(c, func(sess *xorm.Session) error {
@@ -340,6 +348,16 @@ func (s *InvestmentService) Apply(c core.Context, uid int64, req InvestmentOpera
 			if err := validateDefinitionQuantity(req.Quantity, p.QuantityPrecision); err != nil {
 				return err
 			}
+		}
+		if req.EntryPurpose == InvestmentPurchasePurpose {
+			if req.AssetDefinitionId != p.DefinitionId {
+				return errs.ErrInvestmentInvalid
+			}
+			categoryId, e := s.purchaseFundingCategory(sess, uid)
+			if e != nil {
+				return e
+			}
+			req.TransferCategoryId = categoryId
 		}
 		p.Version-- // provisional CAS increment remains invisible until commit
 		rows, err := currentInvestmentRevisions(sess, uid, p.Id)

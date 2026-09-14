@@ -102,3 +102,9 @@ type InvestmentDefinitionBinding struct {
 	Uid          int64  `xorm:"INDEX NOT NULL"`
 	DefinitionId string `xorm:"VARCHAR(36) INDEX NOT NULL"`
 }
+
+// Internal category binding for purchase postings, isolated from expense classification labels.
+type InvestmentPurchaseCategory struct {
+	Uid        int64 `xorm:"PK"`
+	CategoryId int64 `xorm:"NOT NULL"`
+}

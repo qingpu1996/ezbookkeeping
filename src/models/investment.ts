@@ -11,6 +11,7 @@ export interface InvestmentOperation {
     expenseCategoryId: string; cancelled: boolean; comment: string;
 }
 export interface InvestmentRequest extends Omit<InvestmentOperation, 'revision'> {
+    entryPurpose?: 'asset_purchase'; assetDefinitionId?:string;
     requestKey: string; positionId: string; expectedVersion: number;
 }
 export interface InvestmentCalculation {
