@@ -1,4 +1,5 @@
 export interface InvestmentPosition {
+    definitionId?: string; unitName?: string; quantityPrecision?: number;
     id: string; name: string; assetType: string; unit: string; currency: string;
     costAccountId: string; quantity: string; cost: string; realized: string;
     algorithm: string; version: number;
@@ -42,3 +43,5 @@ export function investmentAverage(cost: string, quantity: string): string {
     const scaled = (BigInt(cost) * 100000000000000n + q / 2n) / q;
     return `${scaled / 10000n}.${(scaled % 10000n).toString().padStart(4, '0')}`;
 }
+
+export interface InvestmentDefinition { id:string; name:string; kind:string; unit:string; unitName:string; precision:number; version:number; inUse:boolean; }

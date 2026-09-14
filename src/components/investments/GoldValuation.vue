@@ -3,7 +3,7 @@
   <header><div><h2>黄金参考估值</h2><p>持仓成本保留不变，估值只用于展示资产和浮动盈亏。</p></div><button :disabled="loading || disabled" @click="refresh">刷新报价</button></header>
   <p v-if="error" role="alert">{{ error }}</p>
   <template v-if="valid && result">
-   <div class="estimate"><strong>¥{{ investmentMoney(result.marketValue!) }}</strong><span>{{ position.quantity }} 克 × ¥{{ result.unitPrice }} / 克</span></div>
+   <div class="estimate"><strong>¥{{ investmentMoney(result.marketValue!) }}</strong><span>{{ position.quantity }} {{ position.unitName || position.unit }} × ¥{{ result.unitPrice }} / {{ position.unitName || position.unit }}</span></div>
    <p>浮动盈亏 ¥{{ investmentMoney(result.unrealized || '0') }} · {{ result.sourceName }}</p>
    <p>报价采集 / 手动参考时间：{{ stamp(result.fetchedAt) }}。这是参考估值，不保证能按此价格成交。</p>
    <p v-if="result.quote?.source === 'cmb_spot'">采用招行客户卖出参考价。MarketDay={{ result.quote.marketDay }} · QuotedPrice={{ result.quote.quotedPrice }}。{{ result.quote.marketDay ? '' : '当前标记为非交易日，不能视为实时可成交价。' }}最终以招行交易界面为准。</p>
@@ -16,7 +16,7 @@
     <fieldset :disabled="loading || disabled">
      <label>展示方式<select v-model="form.mode"><option value="cost">只显示持仓成本</option><option value="manual">手动参考价</option><option value="automatic" :disabled="!config.automaticAvailable">自动报价：{{ config.automaticName }}{{ config.automaticAvailable ? '' : '（部署者尚未配置）' }}</option></select></label>
      <template v-if="form.mode === 'manual'">
-      <label>参考卖出价（人民币 / 克）<input v-model="form.manualPrice" inputmode="decimal" required placeholder="输入用于估算的每克价格" /></label>
+      <label>参考卖出价（人民币 / {{ position.unitName || position.unit }}）<input v-model="form.manualPrice" inputmode="decimal" required placeholder="输入每单位参考价" /></label>
       <label>参考时间<input v-model="manualDate" type="datetime-local" required /></label>
       <label>有效期（分钟，最长7天）<input v-model.number="form.maxAgeMinutes" type="number" min="1" max="10080" required /></label>
      </template>

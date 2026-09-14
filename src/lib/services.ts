@@ -1,6 +1,6 @@
 import type { InvestmentValuation, ValuationSettings, ValuationSettingsResponse } from '@/models/investmentValuation';
 import type { AccountGroup, AccountGroupsResponse } from '@/models/accountGroup.ts';
-import type { InvestmentPosition, InvestmentDetail, InvestmentRequest } from "@/models/investment.ts";
+import type { InvestmentDefinition, InvestmentPosition, InvestmentDetail, InvestmentRequest } from "@/models/investment.ts";
 import axios, { type AxiosRequestConfig, type AxiosRequestHeaders, type AxiosResponse } from 'axios';
 
 import type { ApiResponse } from '@/core/api.ts';
@@ -308,9 +308,11 @@ export default {
     getInvestmentValuation: (id: string): ApiResponsePromise<InvestmentValuation> => axios.get('v1/investments/valuation.json',{params:{id}}),
     attachInvestmentPicture: (data: { positionId: string; operationId: string; pictureId: string }): ApiResponsePromise<boolean> => axios.post('v1/investments/attachments/add.json', data),
     readInvestmentPicture: (pictureId: string, extension: string): Promise<AxiosResponse<Blob>> => axios.get(`v1/investments/pictures/${encodeURIComponent(pictureId)}.${encodeURIComponent(extension)}`, { responseType: 'blob' }),
+    getInvestmentDefinitions: (): ApiResponsePromise<InvestmentDefinition[]> => axios.get('v1/investments/definitions.json'),
+    saveInvestmentDefinition: (data: InvestmentDefinition): ApiResponsePromise<InvestmentDefinition> => axios.post('v1/investments/definitions.json',data),
     getInvestments: (): ApiResponsePromise<InvestmentPosition[]> => axios.get('v1/investments/list.json'),
     getInvestment: (id: string): ApiResponsePromise<InvestmentDetail> => axios.get('v1/investments/get.json', { params: { id } }),
-    createInvestment: (data: { requestKey: string; name: string; costAccountId: string }): ApiResponsePromise<InvestmentPosition> => axios.post('v1/investments/add.json', data),
+    createInvestment: (data: { requestKey: string; name: string; costAccountId: string; definitionId?:string }): ApiResponsePromise<InvestmentPosition> => axios.post('v1/investments/add.json', data),
     previewInvestment: (data: InvestmentRequest): ApiResponsePromise<InvestmentDetail> => axios.post('v1/investments/preview.json', data),
     saveInvestment: (data: InvestmentRequest): ApiResponsePromise<InvestmentDetail> => axios.post('v1/investments/save.json', data),
     setLocale: (locale: string) => {

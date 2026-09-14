@@ -1,5 +1,5 @@
 <template>
-    <v-dialog width="1000" :persistent="isTransactionModified || recognizing" v-model="showState">
+    <v-dialog width="1000" :persistent="isTransactionModified || recognizing || assetEntry" v-model="showState">
         <v-card class="pa-sm-1 pa-md-2">
             <template #title>
                 <div class="d-flex align-center justify-center">
@@ -11,14 +11,14 @@
                     <small class="ms-2 text-truncate" v-if="recognizing">{{ tt('AI can make mistakes. Check important info.') }}</small>
                     <v-btn density="comfortable" color="default" variant="text" class="ms-2" :icon="true"
                            :disabled="loading || submitting || recognizing"
-                           v-if="mode !== TransactionEditPageMode.View && type === TransactionEditPageType.Transaction && activeTab === 'basicInfo' && isTransactionFromAITextRecognitionEnabled()"
+                           v-if="mode !== TransactionEditPageMode.View && type === TransactionEditPageType.Transaction && !assetEntry && activeTab === 'basicInfo' && isTransactionFromAITextRecognitionEnabled()"
                            @click="recognizeFromClipboard">
                         <v-icon :icon="mdiMagicStaff" size="22" v-if="!recognizing"/>
                         <v-tooltip activator="parent">{{ tt('AI Clipboard Text Recognition') }}</v-tooltip>
                         <v-progress-circular indeterminate size="22" v-if="recognizing"></v-progress-circular>
                     </v-btn>
                     <v-btn density="comfortable" color="default" variant="text" class="ms-2" :icon="true"
-                           :disabled="loading || submitting || recognizing" v-if="mode !== TransactionEditPageMode.View && (activeTab === 'basicInfo' || (activeTab === 'map' && isSupportGetGeoLocationByClick()))">
+                           :disabled="loading || submitting || recognizing" v-if="!assetEntry && mode !== TransactionEditPageMode.View && (activeTab === 'basicInfo' || (activeTab === 'map' && isSupportGetGeoLocationByClick()))">
                         <v-icon :icon="mdiDotsVertical" />
                         <v-menu activator="parent">
                             <v-list v-if="activeTab === 'basicInfo'">
@@ -59,7 +59,13 @@
                     </v-btn>
                 </div>
             </template>
-            <v-card-text class="d-flex flex-column flex-md-row flex-grow-1 overflow-y-auto">
+            <v-card-text v-if="type === TransactionEditPageType.Transaction && mode === TransactionEditPageMode.Add && isInvestmentAssetsEnabled()" class="py-2">
+ <v-btn :variant="assetEntry?'text':'tonal'" :disabled="assetLocked" @click="assetEntry=false">普通收支 / 转账</v-btn>
+ <v-btn :variant="assetEntry?'tonal':'text'" :disabled="loading || submitting || recognizing" @click="assetOpened=true;assetEntry=true">资产买卖</v-btn>
+</v-card-text>
+<GoldLedger v-if="showState && assetOpened" v-show="assetEntry" trade-only @lock="assetLocked=$event" />
+<v-card-text v-if="assetEntry"><v-btn :disabled="assetLocked" @click="cancel">关闭</v-btn></v-card-text>
+<v-card-text v-if="!assetEntry" class="d-flex flex-column flex-md-row flex-grow-1 overflow-y-auto">
                 <div class="mb-4">
                     <v-tabs class="v-tabs-pill" direction="vertical" :class="{ 'readonly': type === TransactionEditPageType.Transaction && mode !== TransactionEditPageMode.Add && mode !== TransactionEditPageMode.Edit }"
                             :disabled="loading || submitting || recognizing" v-model="transaction.type">
@@ -423,7 +429,7 @@
                     </v-window-item>
                 </v-window>
             </v-card-text>
-            <v-card-text>
+            <v-card-text v-if="!assetEntry">
                 <div class="w-100 d-flex justify-center flex-wrap mt-sm-1 mt-md-2 gap-4">
                     <v-tooltip :disabled="!inputIsEmpty" :text="inputEmptyProblemMessage ? tt(inputEmptyProblemMessage) : ''">
                         <template v-slot:activator="{ props }">
@@ -517,6 +523,8 @@
 </template>
 
 <script setup lang="ts">
+import GoldLedger from '@/components/investments/GoldLedger.vue';
+import {isInvestmentAssetsEnabled} from '@/lib/server_settings';
 import MapView from '@/components/common/MapView.vue';
 import ConfirmDialog from '@/components/desktop/ConfirmDialog.vue';
 import SnackBar from '@/components/desktop/SnackBar.vue';
@@ -684,6 +692,7 @@ const confirmDialog = useTemplateRef<ConfirmDialogType>('confirmDialog');
 const snackbar = useTemplateRef<SnackBarType>('snackbar');
 const pictureInput = useTemplateRef<HTMLInputElement>('pictureInput');
 
+const assetEntry=ref(false),assetOpened=ref(false),assetLocked=ref(false);
 const showState = ref<boolean>(false);
 const showPasteTextDialog = ref<boolean>(false);
 const activeTab = ref<string>('basicInfo');
@@ -723,6 +732,7 @@ const isTransactionModified = computed<boolean>(() => {
 function open(options: TransactionEditOptions): Promise<TransactionEditResponse | undefined> {
     addByTemplateId.value = null;
     duplicateFromId.value = null;
+    assetEntry.value=false;assetOpened.value=false;assetLocked.value=false;
     showState.value = true;
     activeTab.value = 'basicInfo';
     loading.value = true;
@@ -878,6 +888,7 @@ function open(options: TransactionEditOptions): Promise<TransactionEditResponse 
 }
 
 function save(afterAction: AfterSaveAction): void {
+    if (assetEntry.value) return;
     const problemMessage = inputEmptyProblemMessage.value;
 
     if (problemMessage) {
@@ -989,6 +1000,7 @@ function save(afterAction: AfterSaveAction): void {
 }
 
 function recognizeText(text: string): void {
+    if (assetEntry.value) return;
     if (recognizing.value || loading.value || submitting.value) {
         return;
     }
@@ -1012,6 +1024,7 @@ function recognizeText(text: string): void {
 }
 
 function recognizeFromClipboard(): void {
+    if (assetEntry.value) return;
     if (recognizing.value || loading.value || submitting.value) {
         return;
     }

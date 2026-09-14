@@ -1,33 +1,36 @@
 <template>
     <f7-page @page:afterin="onPageAfterIn" @page:beforeout="onPageBeforeOut">
         <f7-navbar>
-            <f7-nav-left :class="{ 'disabled': loading }" :back-link="tt('Back')"></f7-nav-left>
+            <f7-nav-left :class="{ 'disabled': loading || assetLocked }" :back-link="tt('Back')"></f7-nav-left>
             <f7-nav-title :title="tt(title)"></f7-nav-title>
-            <f7-nav-right :class="{ 'navbar-compact-icons': true, 'disabled': loading }" v-if="mode !== TransactionEditPageMode.View || transaction.type !== TransactionType.ModifyBalance">
+            <f7-nav-right :class="{ 'navbar-compact-icons': true, 'disabled': loading }" v-if="!assetEntry && (mode !== TransactionEditPageMode.View || transaction.type !== TransactionType.ModifyBalance)">
                 <f7-link icon-f7="ellipsis" @click="showMoreActionSheet = true"></f7-link>
                 <f7-link icon-f7="checkmark_alt" :class="{ 'disabled': inputIsEmpty || submitting || recognizing }" @click="save(AfterSaveAction.GoBack)" v-if="mode !== TransactionEditPageMode.View"></f7-link>
             </f7-nav-right>
         </f7-navbar>
 
-        <f7-block :class="{ 'subnav-segmented-bar': true, 'disabled': loading }">
+        <f7-block :class="{ 'subnav-segmented-bar': true, 'disabled': loading || assetLocked }">
             <f7-segmented strong round :class="{ 'readonly': pageTypeAndMode?.type === TransactionEditPageType.Transaction && mode !== TransactionEditPageMode.Add && mode !== TransactionEditPageMode.Edit }">
-                <f7-button round :text="tt('Expense')" :active="transaction.type === TransactionType.Expense"
+                <f7-button round :text="tt('Expense')" :active="!assetEntry && transaction.type === TransactionType.Expense"
                            :disabled="pageTypeAndMode?.type === TransactionEditPageType.Transaction && mode !== TransactionEditPageMode.Add && mode !== TransactionEditPageMode.Edit && transaction.type !== TransactionType.Expense"
                            v-if="transaction.type !== TransactionType.ModifyBalance"
-                           @click="transaction.type = TransactionType.Expense"></f7-button>
-                <f7-button round :text="tt('Income')" :active="transaction.type === TransactionType.Income"
+                           @click="assetEntry=false;transaction.type = TransactionType.Expense"></f7-button>
+                <f7-button round :text="tt('Income')" :active="!assetEntry && transaction.type === TransactionType.Income"
                            :disabled="pageTypeAndMode?.type === TransactionEditPageType.Transaction && mode !== TransactionEditPageMode.Add && mode !== TransactionEditPageMode.Edit && transaction.type !== TransactionType.Income"
                            v-if="transaction.type !== TransactionType.ModifyBalance"
-                           @click="transaction.type = TransactionType.Income"></f7-button>
-                <f7-button round :text="tt('Transfer')" :active="transaction.type === TransactionType.Transfer"
+                           @click="assetEntry=false;transaction.type = TransactionType.Income"></f7-button>
+                <f7-button round :text="tt('Transfer')" :active="!assetEntry && transaction.type === TransactionType.Transfer"
                            :disabled="pageTypeAndMode?.type === TransactionEditPageType.Transaction && mode !== TransactionEditPageMode.Add && mode !== TransactionEditPageMode.Edit && transaction.type !== TransactionType.Transfer"
                            v-if="transaction.type !== TransactionType.ModifyBalance"
-                           @click="transaction.type = TransactionType.Transfer"></f7-button>
+                           @click="assetEntry=false;transaction.type = TransactionType.Transfer"></f7-button>
                 <f7-button round :text="tt('Modify Balance')" :active="transaction.type === TransactionType.ModifyBalance"
                            v-if="pageTypeAndMode?.type === TransactionEditPageType.Transaction && transaction.type === TransactionType.ModifyBalance"></f7-button>
+<f7-button round text="资产买卖" :active="assetEntry" :disabled="submitting || recognizing" v-if="pageTypeAndMode?.type === TransactionEditPageType.Transaction && mode === TransactionEditPageMode.Add && isInvestmentAssetsEnabled()" @click="assetOpened=true;assetEntry=true"/>
             </f7-segmented>
         </f7-block>
 
+        <GoldLedger v-if="assetOpened" v-show="assetEntry" trade-only @lock="assetLocked=$event"/>
+        <template v-if="!assetEntry">
         <f7-list strong inset dividers class="margin-vertical-half skeleton-text" v-if="loading">
             <f7-list-input label="Template Name" placeholder="Template Name" v-if="pageTypeAndMode?.type === TransactionEditPageType.Template"></f7-list-input>
             <f7-list-item
@@ -486,14 +489,15 @@
             </f7-actions-group>
         </f7-actions>
 
-        <template #fixed v-if="quickSaveButtonStyleType === TransactionQuickSaveButtonStyle.BottomLeftFloating.type || quickSaveButtonStyleType === TransactionQuickSaveButtonStyle.BottomCenterFloating.type || quickSaveButtonStyleType === TransactionQuickSaveButtonStyle.BottomRightFloating.type">
+        </template>
+        <template #fixed v-if="!assetEntry && (quickSaveButtonStyleType === TransactionQuickSaveButtonStyle.BottomLeftFloating.type || quickSaveButtonStyleType === TransactionQuickSaveButtonStyle.BottomCenterFloating.type || quickSaveButtonStyleType === TransactionQuickSaveButtonStyle.BottomRightFloating.type)">
             <f7-fab id="quick-save-button" :class="{ 'disabled': inputIsEmpty || submitting || recognizing }" :position="quickSaveButtonFloatingPosition"
                     :text="tt(quickSaveButtonTitle)"
                     @click="quickSave" v-if="mode !== TransactionEditPageMode.View">
             </f7-fab>
         </template>
 
-        <f7-toolbar id="quick-save-button" class="compact-tabbar" tabbar bottom v-if="quickSaveButtonStyleType === TransactionQuickSaveButtonStyle.BottomFixed.type && mode !== TransactionEditPageMode.View">
+        <f7-toolbar id="quick-save-button" class="compact-tabbar" tabbar bottom v-if="!assetEntry && quickSaveButtonStyleType === TransactionQuickSaveButtonStyle.BottomFixed.type && mode !== TransactionEditPageMode.View">
             <f7-link :class="{ 'disabled': inputIsEmpty || submitting || recognizing }" @click="quickSave">
                 <span class="tabbar-primary-link">{{ tt(quickSaveButtonTitle) }}</span>
             </f7-link>
@@ -523,7 +527,10 @@
 </template>
 
 <script setup lang="ts">
+import GoldLedger from '@/components/investments/GoldLedger.vue';
+import {isInvestmentAssetsEnabled} from '@/lib/server_settings';
 import { ref, computed, useTemplateRef } from 'vue';
+const assetEntry=ref(false),assetOpened=ref(false),assetLocked=ref(false);
 import type { PhotoBrowser, Router } from 'framework7/types';
 
 import { useI18n } from '@/locales/helpers.ts';
@@ -1093,6 +1100,7 @@ function init(): void {
 }
 
 function save(afterAction: AfterSaveAction): void {
+    if (assetEntry.value) return;
     const router = props.f7router;
 
     if (mode.value === TransactionEditPageMode.View) {
@@ -1231,6 +1239,7 @@ function quickSave(): void {
 }
 
 function recognizeText(text: string): void {
+    if (assetEntry.value) return;
     if (recognizing.value || loading.value || submitting.value) {
         return;
     }
@@ -1257,6 +1266,7 @@ function recognizeText(text: string): void {
 }
 
 function recognizeFromClipboard(): void {
+    if (assetEntry.value) return;
     if (recognizing.value || loading.value || submitting.value) {
         return;
     }

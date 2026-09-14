@@ -45,6 +45,7 @@ func randomInvestmentBytes() []byte {
 }
 
 type InvestmentCreateRequest struct {
+	DefinitionId  string `json:"definitionId,omitempty"`
 	RequestKey    string `json:"requestKey"`
 	Name          string `json:"name"`
 	CostAccountId int64  `json:"costAccountId,string"`
@@ -107,7 +108,16 @@ func (s *InvestmentService) List(c core.Context, uid int64) ([]*models.Investmen
 		return nil, errs.ErrUserIdInvalid
 	}
 	rows := []*models.InvestmentPosition{}
-	err := s.UserDataDB(uid).NewSession(c).Where("uid=?", uid).OrderBy("created_unix_time, id").Find(&rows)
+	sess := s.UserDataDB(uid).NewSession(c)
+	defer sess.Close()
+	err := sess.Where("uid=?", uid).OrderBy("created_unix_time, id").Find(&rows)
+	if err == nil {
+		for _, p := range rows {
+			if err = decorateInvestment(sess, p); err != nil {
+				break
+			}
+		}
+	}
 	return rows, err
 }
 func (s *InvestmentService) Create(c core.Context, uid int64, req InvestmentCreateRequest) (*models.InvestmentPosition, error) {
@@ -122,6 +132,14 @@ func (s *InvestmentService) Create(c core.Context, uid int64, req InvestmentCrea
 		}
 		found, err := loadInvestmentCommand(sess, uid, req.RequestKey, hash, &result)
 		if err != nil || found {
+			return err
+		}
+		definitionId := req.DefinitionId
+		if definitionId == "" {
+			definitionId = legacyGoldDefinition(uid).Id
+		}
+		definition, err := definitionInSession(sess, uid, definitionId)
+		if err != nil {
 			return err
 		}
 		// No-op balance update takes a database write lock without changing the account.
@@ -144,8 +162,14 @@ func (s *InvestmentService) Create(c core.Context, uid int64, req InvestmentCrea
 		if exists {
 			return errs.ErrInvestmentInvalid
 		}
-		result = models.InvestmentPosition{Id: investmentID(), Uid: uid, Name: strings.TrimSpace(req.Name), AssetType: "gold", Unit: "g", Currency: account.Currency, CostAccountId: account.AccountId, Quantity: "0", Algorithm: investments.Algorithm, Version: 1, CreatedUnixTime: time.Now().Unix()}
+		result = models.InvestmentPosition{Id: investmentID(), Uid: uid, Name: strings.TrimSpace(req.Name), AssetType: definition.Kind, Unit: definition.Unit, Currency: account.Currency, CostAccountId: account.AccountId, Quantity: "0", Algorithm: investments.Algorithm, Version: 1, CreatedUnixTime: time.Now().Unix()}
 		if _, err = sess.Insert(&result); err != nil {
+			return err
+		}
+		if _, err = sess.Insert(&models.InvestmentDefinitionBinding{PositionId: result.Id, Uid: uid, DefinitionId: definition.Id}); err != nil {
+			return err
+		}
+		if err = decorateInvestment(sess, &result); err != nil {
 			return err
 		}
 		return saveInvestmentCommand(sess, uid, req.RequestKey, hash, &result)
@@ -190,6 +214,9 @@ func (s *InvestmentService) Detail(c core.Context, uid int64, id string) (*Inves
 		}
 		if !has {
 			return errs.ErrInvestmentNotFound
+		}
+		if err := decorateInvestment(sess, p); err != nil {
+			return err
 		}
 		rows, err := currentInvestmentRevisions(sess, uid, id)
 		if err != nil {
@@ -305,6 +332,14 @@ func (s *InvestmentService) Apply(c core.Context, uid int64, req InvestmentOpera
 		}
 		if !has {
 			return errs.ErrInvestmentNotFound
+		}
+		if err := decorateInvestment(sess, p); err != nil {
+			return err
+		}
+		if !req.Cancelled {
+			if err := validateDefinitionQuantity(req.Quantity, p.QuantityPrecision); err != nil {
+				return err
+			}
 		}
 		p.Version-- // provisional CAS increment remains invisible until commit
 		rows, err := currentInvestmentRevisions(sess, uid, p.Id)

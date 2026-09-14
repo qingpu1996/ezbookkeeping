@@ -73,6 +73,16 @@ func (s *InvestmentService) SaveValuationSettings(c core.Context, uid int64, req
 		if !has {
 			return errs.ErrInvestmentNotFound
 		}
+		if req.Mode == "automatic" {
+			var position models.InvestmentPosition
+			_, e := sess.Where("uid=? AND id=?", uid, req.PositionId).Get(&position)
+			if e != nil {
+				return e
+			}
+			if position.Unit != "g" || position.AssetType != "gold" {
+				return errs.ErrInvestmentInvalid
+			}
+		}
 		var old models.InvestmentValuationSetting
 		has, err = sess.Where("uid=? AND position_id=?", uid, req.PositionId).Get(&old)
 		if err != nil {

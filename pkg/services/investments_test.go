@@ -30,7 +30,7 @@ func setupInvestmentTest(t *testing.T) core.Context {
 	if err := uuid.InitializeUuidGenerator(config); err != nil {
 		t.Fatal(err)
 	}
-	if err := datastore.Container.UserDataStore.SyncStructs(new(models.User), new(models.Account), new(models.Transaction), new(models.TransactionCategory), new(models.TransactionTagIndex), new(models.TransactionTag), new(models.TransactionPictureInfo), new(models.InvestmentPosition), new(models.InvestmentRevision), new(models.InvestmentPosting), new(models.InvestmentCommand), new(models.InvestmentAttachment)); err != nil {
+	if err := datastore.Container.UserDataStore.SyncStructs(new(models.User), new(models.Account), new(models.Transaction), new(models.TransactionCategory), new(models.TransactionTagIndex), new(models.TransactionTag), new(models.TransactionPictureInfo), new(models.InvestmentPosition), new(models.InvestmentRevision), new(models.InvestmentPosting), new(models.InvestmentCommand), new(models.InvestmentDefinition), new(models.InvestmentDefinitionBinding), new(models.InvestmentAttachment)); err != nil {
 		t.Fatal(err)
 	}
 	c := core.NewNullContext()

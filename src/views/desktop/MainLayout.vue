@@ -56,11 +56,12 @@
                     </div>
                 </li>
                 <li class="nav-link">
-                    <router-link to="/account/list" :class="{ 'router-link-active': route.path.startsWith('/account/') }">
+                    <router-link to="/account/list" :class="{ 'router-link-active': route.path.startsWith('/account/') && route.path !== '/account/assets' }">
                         <v-icon class="nav-item-icon" :icon="mdiCreditCardOutline"/>
                         <span class="nav-item-title">{{ tt('Accounts') }}</span>
                     </router-link>
                 </li>
+                <li class="nav-link" v-if="isInvestmentAssetsEnabled()"><router-link to="/account/assets"><v-icon class="nav-item-icon" :icon="mdiViewDashboardOutline"/><span class="nav-item-title">资产定义</span></router-link></li>
                 <li class="nav-link">
                     <router-link to="/category/list">
                         <v-icon class="nav-item-icon" :icon="mdiViewDashboardOutline"/>
@@ -222,7 +223,7 @@ import { APPLICATION_LOGO_PATH } from '@/consts/asset.ts';
 import { ThemeType } from '@/core/theme.ts';
 
 import { getShareCacheImageBlob } from '@/lib/cache.ts';
-import { isUserScheduledTransactionEnabled } from '@/lib/server_settings.ts';
+import { isInvestmentAssetsEnabled, isUserScheduledTransactionEnabled } from '@/lib/server_settings.ts';
 import { getSystemTheme, setExpenseAndIncomeAmountColor } from '@/lib/ui/common.ts';
 import logger from '@/lib/logger.ts';
 

@@ -3,19 +3,22 @@ package models
 // InvestmentPosition binds a quantity ledger to one monetary cost account.
 // Investment tables are additive; legacy Account.Balance remains minor currency units.
 type InvestmentPosition struct {
-	Id              string `xorm:"VARCHAR(36) PK" json:"id"`
-	Uid             int64  `xorm:"INDEX NOT NULL" json:"-"`
-	Name            string `xorm:"VARCHAR(128) NOT NULL" json:"name"`
-	AssetType       string `xorm:"VARCHAR(16) NOT NULL" json:"assetType"`
-	Unit            string `xorm:"VARCHAR(16) NOT NULL" json:"unit"`
-	Currency        string `xorm:"VARCHAR(3) NOT NULL" json:"currency"`
-	CostAccountId   int64  `xorm:"UNIQUE NOT NULL" json:"costAccountId,string"`
-	Quantity        string `xorm:"VARCHAR(40) NOT NULL" json:"quantity"`
-	Cost            int64  `xorm:"NOT NULL" json:"cost,string"`
-	Realized        int64  `xorm:"NOT NULL" json:"realized,string"`
-	Algorithm       string `xorm:"VARCHAR(16) NOT NULL" json:"algorithm"`
-	Version         int64  `xorm:"NOT NULL" json:"version"`
-	CreatedUnixTime int64  `xorm:"NOT NULL" json:"createdAt"`
+	DefinitionId      string `xorm:"-" json:"definitionId"`
+	UnitName          string `xorm:"-" json:"unitName"`
+	QuantityPrecision int    `xorm:"-" json:"quantityPrecision"`
+	Id                string `xorm:"VARCHAR(36) PK" json:"id"`
+	Uid               int64  `xorm:"INDEX NOT NULL" json:"-"`
+	Name              string `xorm:"VARCHAR(128) NOT NULL" json:"name"`
+	AssetType         string `xorm:"VARCHAR(16) NOT NULL" json:"assetType"`
+	Unit              string `xorm:"VARCHAR(16) NOT NULL" json:"unit"`
+	Currency          string `xorm:"VARCHAR(3) NOT NULL" json:"currency"`
+	CostAccountId     int64  `xorm:"UNIQUE NOT NULL" json:"costAccountId,string"`
+	Quantity          string `xorm:"VARCHAR(40) NOT NULL" json:"quantity"`
+	Cost              int64  `xorm:"NOT NULL" json:"cost,string"`
+	Realized          int64  `xorm:"NOT NULL" json:"realized,string"`
+	Algorithm         string `xorm:"VARCHAR(16) NOT NULL" json:"algorithm"`
+	Version           int64  `xorm:"NOT NULL" json:"version"`
+	CreatedUnixTime   int64  `xorm:"NOT NULL" json:"createdAt"`
 }
 
 // InvestmentRevision is append-only. Current facts are the greatest Revision per OperationId.
@@ -80,4 +83,22 @@ type InvestmentValuationSetting struct {
 	ManualAsOf    int64  `json:"manualAsOf"`
 	MaxAgeMinutes int64  `json:"maxAgeMinutes"`
 	UpdatedAt     int64  `json:"updatedAt"`
+}
+
+// Definitions describe units; bindings never change the existing position's quantity or cost.
+type InvestmentDefinition struct {
+	Id        string `xorm:"VARCHAR(36) PK" json:"id"`
+	Uid       int64  `xorm:"INDEX NOT NULL" json:"-"`
+	Name      string `xorm:"VARCHAR(128) NOT NULL" json:"name"`
+	Kind      string `xorm:"VARCHAR(16) NOT NULL" json:"kind"`
+	Unit      string `xorm:"VARCHAR(16) NOT NULL" json:"unit"`
+	UnitName  string `xorm:"VARCHAR(32) NOT NULL" json:"unitName"`
+	Precision int    `xorm:"NOT NULL" json:"precision"`
+	Version   int64  `xorm:"NOT NULL" json:"version"`
+	InUse     bool   `xorm:"-" json:"inUse"`
+}
+type InvestmentDefinitionBinding struct {
+	PositionId   string `xorm:"VARCHAR(36) PK"`
+	Uid          int64  `xorm:"INDEX NOT NULL"`
+	DefinitionId string `xorm:"VARCHAR(36) INDEX NOT NULL"`
 }

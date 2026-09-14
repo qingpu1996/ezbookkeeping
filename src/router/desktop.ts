@@ -159,6 +159,7 @@ const router = createRouter({
                     component: AccountGroupListPage,
                     beforeEnter: checkLogin
                 },
+                { path: '/account/assets', component: () => import('@/views/desktop/investments/DefinitionsPage.vue'), beforeEnter: checkLogin },
                 {
                     path: '/account/gold',
                     component: InvestmentListPage,

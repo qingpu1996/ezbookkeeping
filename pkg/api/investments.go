@@ -121,8 +121,12 @@ func (a *InvestmentsApi) ValuationSettings(c *core.WebContext) (any, *errs.Error
 	if err != nil {
 		return nil, errs.Or(err, errs.ErrOperationFailed)
 	}
+	detail, err := services.Investments.Detail(c, c.GetCurrentUid(), row.PositionId)
+	if err != nil {
+		return nil, errs.Or(err, errs.ErrOperationFailed)
+	}
 	config := settings.Container.GetCurrentConfig()
-	return map[string]any{"settings": row, "automaticAvailable": config.InvestmentQuoteURL != "", "automaticName": config.InvestmentQuoteName, "automaticMaxAgeMinutes": config.InvestmentQuoteMaxAgeMinutes}, nil
+	return map[string]any{"settings": row, "automaticAvailable": config.InvestmentQuoteURL != "" && detail.Position.Unit == "g" && detail.Position.AssetType == "gold", "automaticName": config.InvestmentQuoteName, "automaticMaxAgeMinutes": config.InvestmentQuoteMaxAgeMinutes}, nil
 }
 func (a *InvestmentsApi) SaveValuationSettings(c *core.WebContext) (any, *errs.Error) {
 	var req services.InvestmentValuationRequest
@@ -149,7 +153,7 @@ func (a *InvestmentsApi) Valuations(c *core.WebContext) (any, *errs.Error) {
 		if err != nil {
 			return nil, errs.Or(err, errs.ErrOperationFailed)
 		}
-		if setting.Mode == "automatic" && !fetched {
+		if setting.Mode == "automatic" && p.Unit == "g" && p.AssetType == "gold" && !fetched {
 			quote, quoteErr = fetchGoldQuote(c)
 			fetched = true
 		}
@@ -177,7 +181,7 @@ func valuePosition(c *core.WebContext, p *models.InvestmentPosition, s *models.I
 	} else {
 		config := settings.Container.GetCurrentConfig()
 		result["sourceName"] = config.InvestmentQuoteName
-		if config.InvestmentQuoteURL == "" {
+		if config.InvestmentQuoteURL == "" || p.Unit != "g" || p.AssetType != "gold" {
 			result["status"] = "unconfigured"
 			return result
 		}
@@ -209,4 +213,23 @@ func valuePosition(c *core.WebContext, p *models.InvestmentPosition, s *models.I
 	result["unrealized"] = strconv.FormatInt(value-p.Cost, 10)
 	result["validUntil"] = at.Add(maxAge).Unix()
 	return result
+}
+
+func (a *InvestmentsApi) Definitions(c *core.WebContext) (any, *errs.Error) {
+	rows, err := services.Investments.Definitions(c, c.GetCurrentUid())
+	if err != nil {
+		return nil, errs.Or(err, errs.ErrOperationFailed)
+	}
+	return rows, nil
+}
+func (a *InvestmentsApi) SaveDefinition(c *core.WebContext) (any, *errs.Error) {
+	var req models.InvestmentDefinition
+	if err := c.ShouldBindJSON(&req); err != nil {
+		return nil, errs.NewIncompleteOrIncorrectSubmissionError(err)
+	}
+	row, err := services.Investments.SaveDefinition(c, c.GetCurrentUid(), req)
+	if err != nil {
+		return nil, errs.Or(err, errs.ErrOperationFailed)
+	}
+	return row, nil
 }

@@ -1,3 +1,4 @@
+import AssetDefinitionsPage from '@/views/mobile/investments/DefinitionsPage.vue';
 import AccountGroupListPage from '@/views/mobile/accountGroups/ListPage.vue';
 import InvestmentListPage from '@/views/mobile/investments/ListPage.vue';
 import type { Router } from 'framework7/types';
@@ -189,6 +190,7 @@ const routes: Router.RouteParameters[] = [
         async: asyncResolve(AccountGroupListPage),
         beforeEnter: [checkLogin]
     },
+    { path: '/account/assets', async: asyncResolve(AssetDefinitionsPage), beforeEnter: [checkLogin] },
     {
         path: '/account/gold',
         async: asyncResolve(InvestmentListPage),

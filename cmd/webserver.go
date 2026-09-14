@@ -386,6 +386,8 @@ func startWebServer(c *core.CliContext) error {
 			apiV1Route.POST("/account-groups/delete.json", bindApi(api.AccountGroups.Delete, config))
 			apiV1Route.POST("/account-groups/assign.json", bindApi(api.AccountGroups.Assign, config))
 			if config.EnableInvestmentAssets {
+				apiV1Route.GET("/investments/definitions.json", bindApi(api.Investments.Definitions, config))
+				apiV1Route.POST("/investments/definitions.json", bindApi(api.Investments.SaveDefinition, config))
 				apiV1Route.GET("/investments/valuation.json", bindApi(api.Investments.Valuation, config))
 				apiV1Route.GET("/investments/valuations.json", bindApi(api.Investments.Valuations, config))
 				apiV1Route.GET("/investments/valuation-settings.json", bindApi(api.Investments.ValuationSettings, config))

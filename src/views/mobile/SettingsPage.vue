@@ -5,6 +5,7 @@
         <f7-block-title class="margin-top">{{ currentNickName }}</f7-block-title>
         <f7-list strong inset dividers>
             <f7-list-item :title="tt('User Profile')" link="/user/profile"></f7-list-item>
+            <f7-list-item title="资产定义" link="/account/assets" v-if="isInvestmentAssetsEnabled()"/>
             <f7-list-item :title="tt('Transaction Categories')" link="/category/all"></f7-list-item>
             <f7-list-item :title="tt('Transaction Tags')" link="/tag/list"></f7-list-item>
             <f7-list-item :title="tt('Transaction Templates')" link="/template/list"></f7-list-item>
@@ -132,7 +133,7 @@ import { useExchangeRatesStore } from '@/stores/exchangeRates.ts';
 import { findNameByValue } from '@/lib/common.ts';
 import { parseDateTimeFromUnixTime } from '@/lib/datetime.ts';
 import { getClientDisplayVersion, getDesktopVersionPath } from '@/lib/version.ts';
-import { isUserScheduledTransactionEnabled } from '@/lib/server_settings.ts';
+import { isInvestmentAssetsEnabled, isUserScheduledTransactionEnabled } from '@/lib/server_settings.ts';
 import { setExpenseAndIncomeAmountColor } from '@/lib/ui/common.ts';
 
 const props = defineProps<{
