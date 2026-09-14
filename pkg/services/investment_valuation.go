@@ -32,8 +32,11 @@ func (s *InvestmentService) ValuationSettings(c core.Context, uid int64, id stri
 	if !has {
 		return nil, errs.ErrInvestmentNotFound
 	}
-	row := &models.InvestmentValuationSetting{PositionId: id, Uid: uid, Mode: "cost", MaxAgeMinutes: 1440}
-	_, err = sess.Where("uid=? AND position_id=?", uid, id).Get(row)
+	row := &models.InvestmentValuationSetting{}
+	has, err = sess.Where("uid=? AND position_id=?", uid, id).Get(row)
+	if err == nil && !has {
+		row = &models.InvestmentValuationSetting{PositionId: id, Uid: uid, Mode: "cost", MaxAgeMinutes: 1440}
+	}
 	return row, err
 }
 func (s *InvestmentService) SaveValuationSettings(c core.Context, uid int64, req InvestmentValuationRequest) (*models.InvestmentValuationSetting, error) {

@@ -36,6 +36,10 @@ func TestValuationSettingsIsolateAndPreserveLedger(t *testing.T) {
 	if _, err = Investments.SaveValuationSettings(c, 1, req); err != errs.ErrInvestmentConflict {
 		t.Fatal("stale update", err)
 	}
+	readBack, err := Investments.ValuationSettings(c, 1, p.Id)
+	if err != nil || *readBack != *result {
+		t.Fatal("saved manual settings must survive a fresh read", err, readBack)
+	}
 	req.Version = 1
 	for _, price := range []string{"0", "NaN", "-1", "1e5"} {
 		bad := req
