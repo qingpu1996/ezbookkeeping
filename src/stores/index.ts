@@ -1,3 +1,4 @@
+import {useInvestmentDefinitionsStore} from './investmentDefinition';
 import { ref } from 'vue';
 import { defineStore } from 'pinia';
 
@@ -70,6 +71,7 @@ export const useRootStore = defineStore('root', () => {
         transactionCategoriesStore.resetTransactionCategories();
         transactionTemplatesStore.resetTransactionTemplates();
         accountsStore.resetAccounts();
+        useInvestmentDefinitionsStore().reset();
 
         if (resetUserInfoAndSettings) {
             userStore.resetUserBasicInfo();

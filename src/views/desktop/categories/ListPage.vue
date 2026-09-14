@@ -11,6 +11,7 @@
                                 { name: tt('Transfer'), value: CategoryType.Transfer }
                             ]" v-model="activeCategoryType" @update:model-value="switchAllPrimaryCategories" />
                         </div>
+                        <div class="mx-6 my-4" v-if="isInvestmentAssetsEnabled()"><router-link to="/account/assets">管理投资资产与单位 →</router-link></div>
                         <v-divider />
                         <v-tabs show-arrows class="my-4" direction="vertical"
                                 :disabled="loading" v-model="primaryCategoryId">
@@ -193,6 +194,7 @@
 </template>
 
 <script setup lang="ts">
+import {isInvestmentAssetsEnabled} from '@/lib/server_settings';
 import { VNavigationDrawer } from 'vuetify/components/VNavigationDrawer';
 
 import ConfirmDialog from '@/components/desktop/ConfirmDialog.vue';

@@ -1,7 +1,7 @@
 <template>
     <f7-page @page:afterin="onPageAfterIn" @page:beforeout="onPageBeforeOut">
         <f7-navbar>
-            <f7-nav-left :class="{ 'disabled': loading || purchase.locked }" :back-link="tt('Back')"></f7-nav-left>
+            <f7-nav-left :class="{ 'disabled': loading || purchase.locked || recognizing }" :back-link="tt('Back')"></f7-nav-left>
             <f7-nav-title :title="tt(title)"></f7-nav-title>
             <f7-nav-right :class="{ 'navbar-compact-icons': true, 'disabled': loading }" v-if="(mode !== TransactionEditPageMode.View || transaction.type !== TransactionType.ModifyBalance)">
                 <f7-link icon-f7="ellipsis" :class="{ disabled: purchase.locked }" @click="showMoreActionSheet = true"></f7-link>
@@ -9,7 +9,7 @@
             </f7-nav-right>
         </f7-navbar>
 
-        <f7-block :class="{ 'subnav-segmented-bar': true, 'disabled': loading || purchase.locked }">
+        <f7-block :class="{ 'subnav-segmented-bar': true, 'disabled': loading || purchase.locked || recognizing }">
             <f7-segmented strong round :class="{ 'readonly': pageTypeAndMode?.type === TransactionEditPageType.Transaction && mode !== TransactionEditPageMode.Add && mode !== TransactionEditPageMode.Edit }">
                 <f7-button round :text="tt('Expense')" :active="transaction.type === TransactionType.Expense"
                            :disabled="pageTypeAndMode?.type === TransactionEditPageType.Transaction && mode !== TransactionEditPageMode.Add && mode !== TransactionEditPageMode.Edit && transaction.type !== TransactionType.Expense"
@@ -28,7 +28,7 @@
             </f7-segmented>
         </f7-block>
 
-        <div :inert="purchase.locked || undefined">
+        <div :inert="purchase.locked || (purchase.active && recognizing) || undefined">
         <f7-list strong inset dividers class="margin-vertical-half skeleton-text" v-if="loading">
             <f7-list-input label="Template Name" placeholder="Template Name" v-if="pageTypeAndMode?.type === TransactionEditPageType.Template"></f7-list-input>
             <f7-list-item
@@ -1252,7 +1252,7 @@ function quickSave(): void {
 }
 
 function recognizeText(text: string): void {
-    if (purchase.active || purchase.locked) return;
+    if (purchase.locked) return;
     if (recognizing.value || loading.value || submitting.value) {
         return;
     }
@@ -1265,7 +1265,8 @@ function recognizeText(text: string): void {
     showCancelableLoading('Recognizing', 'AI can make mistakes. Check important info.');
 
     transactionsStore.recognizeTransactionText({ text }).then(response => {
-        updateTransactionModelFromRecognizedResponse(response);
+        if (purchase.active) purchase.applyRecognition(response);
+        else updateTransactionModelFromRecognizedResponse(response);
         closeAllDialog();
         recognizing.value = false;
     }).catch(error => {
@@ -1279,7 +1280,7 @@ function recognizeText(text: string): void {
 }
 
 function recognizeFromClipboard(): void {
-    if (purchase.active || purchase.locked) return;
+    if (purchase.locked) return;
     if (recognizing.value || loading.value || submitting.value) {
         return;
     }

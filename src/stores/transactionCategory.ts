@@ -1,3 +1,5 @@
+import {useInvestmentDefinitionsStore} from './investmentDefinition';
+import {isInvestmentAssetsEnabled} from '@/lib/server_settings';
 import { ref, computed } from 'vue';
 import { defineStore } from 'pinia';
 
@@ -205,6 +207,7 @@ export const useTransactionCategoriesStore = defineStore('transactionCategories'
     }
 
     function loadAllCategories({ force }: { force?: boolean }): Promise<Record<number, TransactionCategory[]>> {
+        if (isInvestmentAssetsEnabled()) void useInvestmentDefinitionsStore().load().catch(() => {});
         if (!force && !transactionCategoryListStateInvalid.value) {
             return new Promise((resolve) => {
                 resolve(allTransactionCategories.value);

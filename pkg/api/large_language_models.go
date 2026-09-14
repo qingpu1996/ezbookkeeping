@@ -119,6 +119,10 @@ func (a *LargeLanguageModelsApi) RecognizeTransactionTextHandler(c *core.WebCont
 		return nil, errs.Or(err, errs.ErrOperationFailed)
 	}
 
+	if a.CurrentConfig().EnableInvestmentAssets {
+		bodyBuffer.WriteString(assetPurchaseRecognitionPrompt)
+	}
+
 	llmRequest := &data.LargeLanguageModelRequest{
 		Stream:         false,
 		SystemPrompt:   strings.ReplaceAll(bodyBuffer.String(), "\r\n", "\n"),
@@ -254,6 +258,10 @@ func (a *LargeLanguageModelsApi) RecognizeReceiptImageHandler(c *core.WebContext
 		return nil, errs.Or(err, errs.ErrOperationFailed)
 	}
 
+	if a.CurrentConfig().EnableInvestmentAssets {
+		bodyBuffer.WriteString(assetPurchaseRecognitionPrompt)
+	}
+
 	llmRequest := &data.LargeLanguageModelRequest{
 		Stream:                false,
 		SystemPrompt:          strings.ReplaceAll(bodyBuffer.String(), "\r\n", "\n"),
@@ -366,6 +374,10 @@ func (a *LargeLanguageModelsApi) parseRecognizedTransactionResponse(c *core.WebC
 	if recognizedResult == nil {
 		log.Errorf(c, "[large_language_models.parseRecognizedTransactionResponse] recoginzed result is null")
 		return nil, errs.ErrNoTransactionInformation
+	}
+
+	if a.CurrentConfig().EnableInvestmentAssets {
+		recognizedTransactionResponse.AssetPurchase = recognizedResult.AssetPurchase
 	}
 
 	if recognizedResult.Type == "income" {
@@ -491,3 +503,10 @@ func (a *LargeLanguageModelsApi) getLongDateTime(dateTime string) string {
 
 	return dateTime
 }
+
+// Adds optional fields to the native text/image response without a second model call.
+const assetPurchaseRecognitionPrompt = `
+For a clearly stated purchase of gold, also return an optional asset_purchase object:
+{"kind":"gold","action":"buy","currency":"CNY","quantity":"decimal string","unit":"explicit unit","gross":"decimal yuan string excluding separately charged fee","fee":"decimal yuan string"}.
+Only copy explicitly supported facts. Use empty strings for missing/ambiguous fields, especially fee; zero fee requires explicit evidence. Do not calculate quantity from money or market price. Do not infer currency. Never interpret a sale, an existing holding, a valuation or an opening balance as a purchase. Omit asset_purchase for those cases. gross is the actual principal, not total including fee. account remains the actual paying account, not the acquired gold holding. Payment channel names do not prove the funding account. Return the ordinary transaction fields too. This is draft form filling only, never execution.
+`

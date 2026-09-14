@@ -11,7 +11,7 @@
                     <small class="ms-2 text-truncate" v-if="recognizing">{{ tt('AI can make mistakes. Check important info.') }}</small>
                     <v-btn density="comfortable" color="default" variant="text" class="ms-2" :icon="true"
                            :disabled="loading || submitting || recognizing || purchase.busy"
-                           v-if="mode !== TransactionEditPageMode.View && type === TransactionEditPageType.Transaction && !purchase.active && activeTab === 'basicInfo' && isTransactionFromAITextRecognitionEnabled()"
+                           v-if="mode !== TransactionEditPageMode.View && type === TransactionEditPageType.Transaction && !purchase.locked && activeTab === 'basicInfo' && isTransactionFromAITextRecognitionEnabled()"
                            @click="recognizeFromClipboard">
                         <v-icon :icon="mdiMagicStaff" size="22" v-if="!recognizing"/>
                         <v-tooltip activator="parent">{{ tt('AI Clipboard Text Recognition') }}</v-tooltip>
@@ -59,7 +59,7 @@
                     </v-btn>
                 </div>
             </template>
-            <v-card-text :inert="purchase.locked || undefined" class="d-flex flex-column flex-md-row flex-grow-1 overflow-y-auto">
+            <v-card-text :inert="purchase.locked || (purchase.active && recognizing) || undefined" class="d-flex flex-column flex-md-row flex-grow-1 overflow-y-auto">
                 <div class="mb-4">
                     <v-tabs class="v-tabs-pill" direction="vertical" :class="{ 'readonly': type === TransactionEditPageType.Transaction && mode !== TransactionEditPageMode.Add && mode !== TransactionEditPageMode.Edit }"
                             :disabled="loading || submitting || recognizing || purchase.busy" v-model="transaction.type">
@@ -1007,7 +1007,7 @@ function save(afterAction: AfterSaveAction): void {
 }
 
 function recognizeText(text: string): void {
-    if (purchase.active || purchase.locked) return;
+    if (purchase.locked) return;
     if (recognizing.value || loading.value || submitting.value) {
         return;
     }
@@ -1019,7 +1019,8 @@ function recognizeText(text: string): void {
     recognizing.value = true;
 
     transactionsStore.recognizeTransactionText({ text }).then(response => {
-        updateTransactionModelFromRecognizedResponse(response);
+        if (purchase.active) purchase.applyRecognition(response);
+        else updateTransactionModelFromRecognizedResponse(response);
         recognizing.value = false;
     }).catch(error => {
         recognizing.value = false;
@@ -1031,7 +1032,7 @@ function recognizeText(text: string): void {
 }
 
 function recognizeFromClipboard(): void {
-    if (purchase.active || purchase.locked) return;
+    if (purchase.locked) return;
     if (recognizing.value || loading.value || submitting.value) {
         return;
     }

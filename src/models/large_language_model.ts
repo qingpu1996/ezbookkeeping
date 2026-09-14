@@ -1,4 +1,5 @@
 export interface RecognizedTransactionResponse {
+    readonly assetPurchase?: {kind?:string;action?:string;currency?:string;quantity?:string;unit?:string;gross?:string;fee?:string};
     readonly type: number;
     readonly time?: number;
     readonly categoryId?: string;

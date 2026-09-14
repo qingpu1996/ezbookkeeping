@@ -12,6 +12,7 @@
                 <f7-link icon-f7="checkmark_alt" :class="{ 'disabled': displayOrderSaving || !displayOrderModified }" @click="saveSortResult" v-else-if="sortable"></f7-link>
             </f7-nav-right>
         </f7-navbar>
+        <f7-list strong inset v-if="isInvestmentAssetsEnabled()"><f7-list-item link="/account/assets" title="管理投资资产与单位" /></f7-list>
 
         <f7-list strong inset dividers class="margin-top-half skeleton-text" v-if="loading">
             <f7-list-item title="Category Name"
@@ -94,6 +95,7 @@
 </template>
 
 <script setup lang="ts">
+import {isInvestmentAssetsEnabled} from '@/lib/server_settings';
 import { ref, computed } from 'vue';
 import type { Router } from 'framework7/types';
 
