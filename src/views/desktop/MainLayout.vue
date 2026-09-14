@@ -61,7 +61,7 @@
                         <span class="nav-item-title">{{ tt('Accounts') }}</span>
                     </router-link>
                 </li>
-                <li class="nav-link" v-if="isInvestmentAssetsEnabled()"><router-link to="/account/assets"><v-icon class="nav-item-icon" :icon="mdiViewDashboardOutline"/><span class="nav-item-title">资产定义</span></router-link></li>
+                <li class="nav-link" v-if="isInvestmentAssetsEnabled()"><router-link to="/account/assets"><v-icon class="nav-item-icon" :icon="mdiBriefcaseOutline"/><span class="nav-item-title">资产定义</span></router-link></li>
                 <li class="nav-link">
                     <router-link to="/category/list">
                         <v-icon class="nav-item-icon" :icon="mdiViewDashboardOutline"/>
@@ -234,6 +234,7 @@ import {
     mdiPlusCircle,
     mdiCreditCardOutline,
     mdiViewDashboardOutline,
+    mdiBriefcaseOutline,
     mdiTagOutline,
     mdiClipboardTextOutline,
     mdiClipboardTextClockOutline,
