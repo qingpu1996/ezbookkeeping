@@ -504,13 +504,13 @@ export const useAccountsStore = defineStore('accounts', () => {
         }
     }
 
-    function getTotalAssets(showAccountBalance: boolean, displayBalances: Record<string, number> = {}): number | HiddenAmount | NumberWithSuffix {
+    function getTotalAssets(showAccountBalance: boolean, displayBalances: Record<string, number> = {}, kind?: 'cash' | 'investment'): number | HiddenAmount | NumberWithSuffix {
         if (!showAccountBalance) {
             return DISPLAY_HIDDEN_AMOUNT;
         }
 
         const accountsBalance = getAllFilteredAccountsBalance(allCategorizedAccountsMap.value, settingsStore.appSettings.accountCategoryOrders,
-                account => (account.isAsset || false) && !(account.type === AccountType.SingleAccount.type && settingsStore.appSettings.totalAmountExcludeAccountIds[account.id])
+                account => (account.isAsset || false) && !(account.type === AccountType.SingleAccount.type && settingsStore.appSettings.totalAmountExcludeAccountIds[account.id]) && (account.type !== AccountType.SingleAccount.type || !kind || (kind === 'investment' ? !!account.investmentPositionId : !account.investmentPositionId))
         , displayBalances);
         let totalAssets = 0;
         let hasUnCalculatedAmount = false;

@@ -1,6 +1,7 @@
 <template>
     <v-row class="match-height">
         <v-col cols="12">
+        <FundingPlanPanel :accounts="allAccounts" :accounts-loading="loading" :show-balances="showAccountBalance" />
         <p v-if="valuationNote" class="pa-3" role="status">{{ valuationNote }} <button type="button" @click="refreshValuations">刷新估值</button></p>
             <v-card>
                 <div class="pa-4"><router-link to="/account/groups">机构分组：银行与支付平台</router-link></div>
@@ -21,6 +22,8 @@
                                     <v-skeleton-loader class="skeleton-no-margin pt-2 pb-1" type="text" :loading="true"></v-skeleton-loader>
                                 </span>
                             </p>
+                            <span class="text-subtitle-2">资金余额</span><p class="account-statistic-item-value mt-1 mb-3">{{ loading ? '…' : cashAssets }}</p>
+                            <span class="text-subtitle-2">投资资产估值 / 成本</span><p class="account-statistic-item-value mt-1 mb-3">{{ loading ? '…' : investmentAssets }}</p>
                             <span class="text-subtitle-2">{{ tt('Total assets') }}</span>
                             <p class="account-statistic-item-value mt-1">
                                 <span v-if="!loading || allAccountCount > 0">{{ totalAssets }}</span>
@@ -322,6 +325,7 @@
 </template>
 
 <script setup lang="ts">
+import FundingPlanPanel from '@/components/accounts/FundingPlanPanel.vue';
 import { accountDestination, canSetUpGold } from '@/lib/account_navigation.ts';
 import ConfirmDialog from '@/components/desktop/ConfirmDialog.vue';
 import SnackBar from '@/components/desktop/SnackBar.vue';
@@ -398,6 +402,7 @@ const {
     allCategorizedAccountsMap,
     allAccountCount,
     valuationNote, refreshValuations,
+    cashAssets, investmentAssets,
     netAssets,
     totalAssets,
     totalLiabilities,

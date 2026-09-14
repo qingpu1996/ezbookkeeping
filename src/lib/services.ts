@@ -1,3 +1,4 @@
+import type { FundingPlan } from '@/models/fundingPlan';
 import type { InvestmentValuation, ValuationSettings, ValuationSettingsResponse } from '@/models/investmentValuation';
 import type { AccountGroup, AccountGroupsResponse } from '@/models/accountGroup.ts';
 import type { InvestmentDefinition, InvestmentPosition, InvestmentDetail, InvestmentRequest } from "@/models/investment.ts";
@@ -298,6 +299,8 @@ axios.interceptors.response.use(response => {
 });
 
 export default {
+    getFundingPlan: (): ApiResponsePromise<FundingPlan> => axios.get('v1/funding-plan.json'),
+    saveFundingPlan: (data: Omit<FundingPlan, 'configured'>): ApiResponsePromise<FundingPlan> => axios.post('v1/funding-plan.json', data),
     getAccountGroups: (): ApiResponsePromise<AccountGroupsResponse> => axios.get('v1/account-groups/list.json'),
     saveAccountGroup: (data: { id?: string; name: string; version?: number }): ApiResponsePromise<AccountGroup> => axios.post('v1/account-groups/save.json', data),
     deleteAccountGroup: (data: { id: string; version: number }): ApiResponsePromise<boolean> => axios.post('v1/account-groups/delete.json', data),

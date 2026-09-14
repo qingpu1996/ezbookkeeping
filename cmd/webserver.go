@@ -381,6 +381,8 @@ func startWebServer(c *core.CliContext) error {
 			}
 
 			// Custom investment endpoints reuse the authenticated application route.
+			apiV1Route.GET("/funding-plan.json", bindApi(api.FundingPlans.Get, config))
+			apiV1Route.POST("/funding-plan.json", bindApi(api.FundingPlans.Save, config))
 			apiV1Route.GET("/account-groups/list.json", bindApi(api.AccountGroups.List, config))
 			apiV1Route.POST("/account-groups/save.json", bindApi(api.AccountGroups.Save, config))
 			apiV1Route.POST("/account-groups/delete.json", bindApi(api.AccountGroups.Delete, config))

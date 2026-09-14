@@ -13,6 +13,7 @@
                 <f7-link icon-f7="checkmark_alt" :class="{ 'disabled': displayOrderSaving || !displayOrderModified }" @click="saveSortResult" v-else-if="sortable"></f7-link>
             </f7-nav-right>
         </f7-navbar>
+        <FundingPlanPanel :accounts="allAccounts" :accounts-loading="loading" :show-balances="showAccountBalance" />
         <p v-if="valuationNote" class="pa-3" role="status">{{ valuationNote }} <button type="button" @click="refreshValuations">刷新估值</button></p>
 
         <f7-card class="account-overview-card margin-top-half" :class="{ 'skeleton-text': loading }">
@@ -40,6 +41,7 @@
                         <span>{{ totalLiabilities }}</span>
                     </small>
                 </p>
+            <p v-if="!loading" class="no-margin"><small>资金余额 {{ cashAssets }}<br />投资资产估值 / 成本 {{ investmentAssets }}</small></p>
             </f7-card-header>
         </f7-card>
 
@@ -225,6 +227,7 @@
 </template>
 
 <script setup lang="ts">
+import FundingPlanPanel from '@/components/accounts/FundingPlanPanel.vue';
 import { accountDestination, canSetUpGold } from '@/lib/account_navigation.ts';
 import { ref, computed } from 'vue';
 import type { Router } from 'framework7/types';
@@ -257,10 +260,12 @@ const {
     showAccountBalance,
     customAccountCategoryOrder,
     useLastReconciledTime,
+    allAccounts,
     allCategorizedAccountsMap,
     allAccountCount,
     maxCategoryAccountCount,
     valuationNote, refreshValuations,
+    cashAssets, investmentAssets,
     netAssets,
     totalAssets,
     totalLiabilities,

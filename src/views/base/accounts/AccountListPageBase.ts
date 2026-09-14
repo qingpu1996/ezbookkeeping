@@ -54,6 +54,9 @@ export function useAccountListPageBase() {
         return formatAmountToLocalizedNumeralsWithCurrency(totalAssets, defaultCurrency.value);
     });
 
+    const cashAssets = computed(() => formatAmountToLocalizedNumeralsWithCurrency(accountsStore.getTotalAssets(showAccountBalance.value, displayBalances.value, 'cash'), defaultCurrency.value));
+    const investmentAssets = computed(() => formatAmountToLocalizedNumeralsWithCurrency(accountsStore.getTotalAssets(showAccountBalance.value, displayBalances.value, 'investment'), defaultCurrency.value));
+
     const totalLiabilities = computed<string>(() => {
         const totalLiabilities: number | HiddenAmount | NumberWithSuffix = accountsStore.getTotalLiabilities(showAccountBalance.value, displayBalances.value);
         return formatAmountToLocalizedNumeralsWithCurrency(totalLiabilities, defaultCurrency.value);
@@ -108,6 +111,7 @@ export function useAccountListPageBase() {
         allCategorizedAccountsMap,
         allAccountCount,
         maxCategoryAccountCount,
+        cashAssets, investmentAssets,
         netAssets,
         totalAssets,
         totalLiabilities,
