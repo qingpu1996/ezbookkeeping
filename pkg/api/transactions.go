@@ -2150,6 +2150,9 @@ func (a *TransactionsApi) TransactionBatchDeleteHandler(c *core.WebContext) (any
 		return nil, errs.ErrUserPasswordWrong
 	}
 
+	if err := services.Investments.GuardTransactions(c, uid, transactionIds); err != nil {
+		return nil, errs.Or(err, errs.ErrOperationFailed)
+	}
 	transactions, err := a.transactions.GetTransactionsByTransactionIds(c, uid, transactionIds)
 
 	if err != nil {

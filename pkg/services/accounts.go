@@ -370,6 +370,14 @@ func (s *AccountService) CreateAccounts(c core.Context, mainAccount *models.Acco
 
 // ModifyAccounts saves an existed account model to database
 func (s *AccountService) ModifyAccounts(c core.Context, mainAccount *models.Account, updateAccounts []*models.Account, addSubAccounts []*models.Account, addSubAccountBalanceTimes []int64, removeSubAccountIds []int64, clientTimezone *time.Location) error {
+	ids := []int64{mainAccount.AccountId}
+	ids = append(ids, removeSubAccountIds...)
+	for _, a := range updateAccounts {
+		ids = append(ids, a.AccountId)
+	}
+	if err := Investments.GuardAccounts(c, mainAccount.Uid, ids); err != nil {
+		return err
+	}
 	if mainAccount.Uid <= 0 {
 		return errs.ErrUserIdInvalid
 	}
@@ -442,6 +450,12 @@ func (s *AccountService) ModifyAccounts(c core.Context, mainAccount *models.Acco
 	userDataDb := s.UserDataDB(mainAccount.Uid)
 
 	return userDataDb.DoTransaction(c, func(sess *xorm.Session) error {
+		if err := lockInvestmentOwner(sess, mainAccount.Uid); err != nil {
+			return err
+		}
+		if err := guardInvestmentAccounts(sess, mainAccount.Uid, ids); err != nil {
+			return err
+		}
 		// update accounts
 		for i := 0; i < len(updateAccounts); i++ {
 			account := updateAccounts[i]
@@ -615,6 +629,9 @@ func (s *AccountService) UpdateAccountExtend(c core.Context, uid int64, account 
 
 // HideAccount updates hidden field of given accounts
 func (s *AccountService) HideAccount(c core.Context, uid int64, ids []int64, hidden bool) error {
+	if err := Investments.GuardAccounts(c, uid, ids); err != nil {
+		return err
+	}
 	if uid <= 0 {
 		return errs.ErrUserIdInvalid
 	}
@@ -627,6 +644,12 @@ func (s *AccountService) HideAccount(c core.Context, uid int64, ids []int64, hid
 	}
 
 	return s.UserDataDB(uid).DoTransaction(c, func(sess *xorm.Session) error {
+		if err := lockInvestmentOwner(sess, uid); err != nil {
+			return err
+		}
+		if err := guardInvestmentAccounts(sess, uid, ids); err != nil {
+			return err
+		}
 		updatedRows, err := sess.Cols("hidden", "updated_unix_time").Where("uid=? AND deleted=?", uid, false).In("account_id", ids).Update(updateModel)
 
 		if err != nil {
@@ -667,6 +690,9 @@ func (s *AccountService) ModifyAccountDisplayOrders(c core.Context, uid int64, a
 
 // DeleteAccount deletes an existed account from database
 func (s *AccountService) DeleteAccount(c core.Context, uid int64, accountId int64) error {
+	if err := Investments.GuardAccounts(c, uid, []int64{accountId}); err != nil {
+		return err
+	}
 	if uid <= 0 {
 		return errs.ErrUserIdInvalid
 	}
@@ -680,6 +706,12 @@ func (s *AccountService) DeleteAccount(c core.Context, uid int64, accountId int6
 	}
 
 	return s.UserDataDB(uid).DoTransaction(c, func(sess *xorm.Session) error {
+		if err := lockInvestmentOwner(sess, uid); err != nil {
+			return err
+		}
+		if err := guardInvestmentAccounts(sess, uid, []int64{accountId}); err != nil {
+			return err
+		}
 		var accountAndSubAccounts []*models.Account
 		err := sess.Where("uid=? AND deleted=? AND ((account_id=? AND parent_account_id=?) OR parent_account_id=?)", uid, false, accountId, models.LevelOneAccountParentId, accountId).Find(&accountAndSubAccounts)
 
@@ -785,6 +817,9 @@ func (s *AccountService) DeleteAccount(c core.Context, uid int64, accountId int6
 
 // DeleteSubAccount deletes an existed sub-account from database
 func (s *AccountService) DeleteSubAccount(c core.Context, uid int64, accountId int64) error {
+	if err := Investments.GuardAccounts(c, uid, []int64{accountId}); err != nil {
+		return err
+	}
 	if uid <= 0 {
 		return errs.ErrUserIdInvalid
 	}
@@ -798,6 +833,12 @@ func (s *AccountService) DeleteSubAccount(c core.Context, uid int64, accountId i
 	}
 
 	return s.UserDataDB(uid).DoTransaction(c, func(sess *xorm.Session) error {
+		if err := lockInvestmentOwner(sess, uid); err != nil {
+			return err
+		}
+		if err := guardInvestmentAccounts(sess, uid, []int64{accountId}); err != nil {
+			return err
+		}
 		account := &models.Account{}
 		has, err := sess.Cols("account_id", "uid", "deleted", "parent_account_id").Where("uid=? AND deleted=? AND account_id=? AND parent_account_id<>?", uid, false, accountId, models.LevelOneAccountParentId).Limit(1).Get(account)
 

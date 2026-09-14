@@ -141,3 +141,5 @@ export function getAmapApplicationSecret(): string {
 export function getExchangeRatesRequestTimeout(): number {
     return getServerSetting('errt') as number;
 }
+
+export function isInvestmentAssetsEnabled(): boolean { return getServerSetting('inv') === 1; }

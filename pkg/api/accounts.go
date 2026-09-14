@@ -57,11 +57,20 @@ func (a *AccountsApi) AccountListHandler(c *core.WebContext) (any, *errs.Error) 
 		return nil, errs.Or(err, errs.ErrOperationFailed)
 	}
 
+	positions, err := services.Investments.List(c, uid)
+	if err != nil {
+		return nil, errs.Or(err, errs.ErrOperationFailed)
+	}
+	positionByAccount := map[int64]string{}
+	for _, p := range positions {
+		positionByAccount[p.CostAccountId] = p.Id
+	}
 	userAllAccountResps := make([]*models.AccountInfoResponse, len(accounts))
 	userAllAccountRespMap := make(map[int64]*models.AccountInfoResponse)
 
 	for i := 0; i < len(accounts); i++ {
 		userAllAccountResps[i] = accounts[i].ToAccountInfoResponse()
+		userAllAccountResps[i].InvestmentPositionId = positionByAccount[accounts[i].AccountId]
 		userAllAccountRespMap[userAllAccountResps[i].Id] = userAllAccountResps[i]
 	}
 

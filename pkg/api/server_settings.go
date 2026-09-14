@@ -47,6 +47,7 @@ func (a *ServerSettingsApi) ServerSettingsJavascriptHandler(c *core.WebContext) 
 	a.appendBooleanSetting(builder, "v", config.EnableUserVerifyEmail)
 	a.appendBooleanSetting(builder, "p", config.EnableTransactionPictures)
 	a.appendBooleanSetting(builder, "s", config.EnableScheduledTransaction)
+	a.appendBooleanSetting(builder, "inv", config.EnableInvestmentAssets)
 	a.appendBooleanSetting(builder, "e", config.EnableDataExport)
 	a.appendBooleanSetting(builder, "i", config.EnableDataImport)
 

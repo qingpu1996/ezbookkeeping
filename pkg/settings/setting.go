@@ -431,6 +431,9 @@ type Config struct {
 	EnableUserForceVerifyEmail    bool
 	EnableTransactionPictures     bool
 	MaxTransactionPictureFileSize uint32
+	InvestmentQuoteURL            string
+	InvestmentQuoteToken          string
+	EnableInvestmentAssets        bool
 	EnableScheduledTransaction    bool
 	AvatarProvider                core.UserAvatarProviderType
 	MaxAvatarFileSize             uint32
@@ -1144,6 +1147,9 @@ func loadUserConfiguration(config *Config, configFile *ini.File, sectionName str
 	config.EnableUserForceVerifyEmail = getConfigItemBoolValue(configFile, sectionName, "enable_force_email_verify", false)
 	config.EnableTransactionPictures = getConfigItemBoolValue(configFile, sectionName, "enable_transaction_picture", false)
 	config.MaxTransactionPictureFileSize = getConfigItemUint32Value(configFile, sectionName, "max_transaction_picture_size", defaultTransactionPictureFileMaxSize)
+	config.InvestmentQuoteURL = getConfigItemStringValue(configFile, sectionName, "investment_quote_url", "")
+	config.InvestmentQuoteToken = getConfigItemStringValue(configFile, sectionName, "investment_quote_token", "")
+	config.EnableInvestmentAssets = getConfigItemBoolValue(configFile, sectionName, "enable_investment_assets", false)
 	config.EnableScheduledTransaction = getConfigItemBoolValue(configFile, sectionName, "enable_scheduled_transaction", false)
 
 	if getConfigItemStringValue(configFile, sectionName, "avatar_provider") == string(core.USER_AVATAR_PROVIDER_INTERNAL) {

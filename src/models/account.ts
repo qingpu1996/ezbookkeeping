@@ -5,6 +5,7 @@ import { PARENT_ACCOUNT_CURRENCY_PLACEHOLDER } from '@/consts/currency.ts';
 import { DEFAULT_ACCOUNT_COLOR } from '@/consts/color.ts';
 
 export class Account implements AccountInfoResponse {
+    public investmentPositionId?: string;
     public id: string;
     public name: string;
     public parentId: string;
@@ -438,7 +439,7 @@ export class Account implements AccountInfoResponse {
     }
 
     public static of(accountResponse: AccountInfoResponse): Account {
-        return new Account(
+        const account = new Account(
             accountResponse.id,
             accountResponse.name,
             accountResponse.parentId,
@@ -458,6 +459,8 @@ export class Account implements AccountInfoResponse {
             accountResponse.isLiability,
             accountResponse.subAccounts ? Account.ofMulti(accountResponse.subAccounts) : undefined
         );
+        account.investmentPositionId = accountResponse.investmentPositionId;
+        return account;
     }
 
     public static ofMulti(accountResponses: AccountInfoResponse[]): Account[] {
@@ -620,6 +623,7 @@ export interface AccountUpdateLastReconciledTimeRequest {
 }
 
 export interface AccountInfoResponse {
+    readonly investmentPositionId?: string;
     readonly id: string;
     readonly name: string;
     readonly parentId: string;

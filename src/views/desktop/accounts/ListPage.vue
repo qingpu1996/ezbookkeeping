@@ -162,7 +162,7 @@
                                                                 <div class="account-title d-flex align-baseline">
                                                                     <ItemIcon size="1.5rem" icon-type="account" :icon-id="element.icon"
                                                                               :color="element.color" :hidden-status="element.hidden" />
-                                                                    <span class="account-name text-truncate ms-2">{{ element.name }}</span>
+                                                                    <span class="account-name text-truncate ms-2">{{ element.name }}<small v-if="element.investmentPositionId"> · 成本</small></span>
                                                                     <small class="account-currency text-truncate ms-2">
                                                                         {{ accountCurrency(element) }}
                                                                     </small>

@@ -1,3 +1,4 @@
+import InvestmentListPage from '@/views/desktop/investments/ListPage.vue';
 import { type NavigationGuardReturn, createRouter, createWebHashHistory } from 'vue-router';
 
 import { TemplateType } from '@/core/template.ts';
@@ -151,6 +152,11 @@ const router = createRouter({
                         initStartTime: route.query['startTime'],
                         initEndTime: route.query['endTime']
                     })
+                },
+                {
+                    path: '/investment/list',
+                    component: InvestmentListPage,
+                    beforeEnter: checkLogin
                 },
                 {
                     path: '/account/list',

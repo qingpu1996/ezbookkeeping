@@ -215,7 +215,8 @@ export default defineConfig(() => {
                     chunkFileNames: 'js/[name]-[hash].js',
                     entryFileNames: 'js/[name]-[hash].js',
                     codeSplitting: {
-                        includeDependenciesRecursively: false,
+                        // Keep initialization dependencies with their chunks; false can emit cyclic CJS initializers.
+                        includeDependenciesRecursively: true,
                         groups: [
                             {
                                 name:  'leaflet',

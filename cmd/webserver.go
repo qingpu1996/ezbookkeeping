@@ -380,6 +380,20 @@ func startWebServer(c *core.CliContext) error {
 				apiV1Route.GET("/data/export.tsv", bindTsv(api.DataManagements.ExportDataToEzbookkeepingTSVHandler, config))
 			}
 
+			// Custom investment endpoints reuse the authenticated application route.
+			if config.EnableInvestmentAssets {
+				apiV1Route.GET("/investments/valuation.json", bindApi(api.Investments.Valuation, config))
+				apiV1Route.GET("/investments/list.json", bindApi(api.Investments.List, config))
+				apiV1Route.GET("/investments/get.json", bindApi(api.Investments.Detail, config))
+				apiV1Route.POST("/investments/add.json", bindApi(api.Investments.Create, config))
+				apiV1Route.POST("/investments/preview.json", bindApi(api.Investments.Preview, config))
+				apiV1Route.POST("/investments/save.json", bindApi(api.Investments.Save, config))
+				if config.EnableTransactionPictures {
+					apiV1Route.POST("/investments/attachments/add.json", bindApi(api.Investments.Attach, config))
+					apiV1Route.GET("/investments/pictures/:fileName", bindImage(api.TransactionPictures.TransactionPictureGetHandler, config))
+				}
+			}
+
 			// Accounts
 			apiV1Route.GET("/accounts/list.json", bindApi(api.Accounts.AccountListHandler, config))
 			apiV1Route.GET("/accounts/get.json", bindApi(api.Accounts.AccountGetHandler, config))

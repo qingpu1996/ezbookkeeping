@@ -167,6 +167,9 @@ func (a *DataManagementsApi) ClearAllDataHandler(c *core.WebContext) (any, *errs
 		return nil, errs.ErrNotPermittedToPerformThisAction
 	}
 
+	if err := services.Investments.GuardClear(c, uid); err != nil {
+		return nil, errs.Or(err, errs.ErrOperationFailed)
+	}
 	err = a.templates.DeleteAllTemplates(c, uid)
 
 	if err != nil {

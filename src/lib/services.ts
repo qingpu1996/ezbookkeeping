@@ -1,3 +1,4 @@
+import type { InvestmentPosition, InvestmentDetail, InvestmentRequest } from "@/models/investment.ts";
 import axios, { type AxiosRequestConfig, type AxiosRequestHeaders, type AxiosResponse } from 'axios';
 
 import type { ApiResponse } from '@/core/api.ts';
@@ -268,7 +269,7 @@ axios.interceptors.response.use(response => {
 
     return response;
 }, error => {
-    if ('cancelableUuid' in error.response.config && error.response.config.cancelableUuid && cancelableRequests[error.response.config.cancelableUuid]) {
+    if (error.response?.config && 'cancelableUuid' in error.response.config && error.response.config.cancelableUuid && cancelableRequests[error.response.config.cancelableUuid]) {
         logger.debug('Response canceled by user request, url: ' + error.response.config.url + ', cancelableUuid: ' + error.response.config.cancelableUuid);
         delete cancelableRequests[error.response.config.cancelableUuid];
         return Promise.reject({ canceled: true });
@@ -295,6 +296,14 @@ axios.interceptors.response.use(response => {
 });
 
 export default {
+    getInvestmentValuation: (id: string): ApiResponsePromise<{ status: string; reason?: string; marketValue: string | null; unrealized?: string; positionVersion?: number; quote?: { fetchedAt: string; apiNowTime: string; marketDay: boolean; quotedPrice: boolean } }> => axios.get('v1/investments/valuation.json', { params: { id } }),
+    attachInvestmentPicture: (data: { positionId: string; operationId: string; pictureId: string }): ApiResponsePromise<boolean> => axios.post('v1/investments/attachments/add.json', data),
+    readInvestmentPicture: (pictureId: string, extension: string): Promise<AxiosResponse<Blob>> => axios.get(`v1/investments/pictures/${encodeURIComponent(pictureId)}.${encodeURIComponent(extension)}`, { responseType: 'blob' }),
+    getInvestments: (): ApiResponsePromise<InvestmentPosition[]> => axios.get('v1/investments/list.json'),
+    getInvestment: (id: string): ApiResponsePromise<InvestmentDetail> => axios.get('v1/investments/get.json', { params: { id } }),
+    createInvestment: (data: { requestKey: string; name: string; costAccountId: string }): ApiResponsePromise<InvestmentPosition> => axios.post('v1/investments/add.json', data),
+    previewInvestment: (data: InvestmentRequest): ApiResponsePromise<InvestmentDetail> => axios.post('v1/investments/preview.json', data),
+    saveInvestment: (data: InvestmentRequest): ApiResponsePromise<InvestmentDetail> => axios.post('v1/investments/save.json', data),
     setLocale: (locale: string) => {
         axios.defaults.headers.common['Accept-Language'] = locale;
     },

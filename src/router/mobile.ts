@@ -1,3 +1,4 @@
+import InvestmentListPage from '@/views/mobile/investments/ListPage.vue';
 import type { Router } from 'framework7/types';
 
 import { isUserLogined, isUserUnlocked } from '@/lib/userstate.ts';
@@ -180,6 +181,11 @@ const routes: Router.RouteParameters[] = [
     {
         path: '/transaction/detail',
         async: asyncResolve(TransactionEditPage),
+        beforeEnter: [checkLogin]
+    },
+    {
+        path: '/investment/list',
+        async: asyncResolve(InvestmentListPage),
         beforeEnter: [checkLogin]
     },
     {
