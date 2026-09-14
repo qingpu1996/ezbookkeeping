@@ -1,5 +1,12 @@
 # Gold investment assets — development candidate
 
+
+## Deployed patch: 1.6.1-gold.2 (2026-09-14)
+
+Commit `d4b54021` filters unset/nonpositive transaction IDs before investment ownership checks. A zero related ID previously matched unrelated investment postings and blocked ordinary cash transactions for users with positions. Regression first failed on old code, then passed after the fix; full Go suite and frontend build passed.
+
+NAS PostgreSQL rehearsal verified ordinary income/expense/transfer create, read, modify and delete, with balances restored. Actual investment P/L modification/deletion and direct cost-account writes remain rejected. Deployed image ID: `sha256:85a0f1fe3b12d20f4c66efdff1e6fbcf8d072efc853607e7a3609df742266a26`. Existing 21 tables, attachments and secrets were preserved, native DeepSeek configuration retained. Post-upgrade encrypted backup was restored to an independent database/storage and 19 ledger-related table hashes, attachments and backed-up secrets matched. Real iPhone testing and an independent off-NAS backup remain outside this verified patch result.
+
 Base: upstream v1.6.1 (`6ccd0c462100828c78e203792a5b2feb8d569039`). Branch: `feature/investment-assets`. Custom release `1.6.1-gold.1` was deployed to the authorized amd64 NAS after isolated rehearsal on 2026-09-14. It is not an official upstream release. Deployed code revision: `7645b870`.
 
 ## Scope
