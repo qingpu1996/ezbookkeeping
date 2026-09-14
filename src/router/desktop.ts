@@ -160,6 +160,11 @@ const router = createRouter({
                     beforeEnter: checkLogin
                 },
                 {
+                    path: '/account/gold',
+                    component: InvestmentListPage,
+                    beforeEnter: checkLogin
+                },
+                {
                     path: '/investment/list',
                     component: InvestmentListPage,
                     beforeEnter: checkLogin

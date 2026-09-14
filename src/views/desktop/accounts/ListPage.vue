@@ -163,7 +163,7 @@
                                                                 <div class="account-title d-flex align-baseline">
                                                                     <ItemIcon size="1.5rem" icon-type="account" :icon-id="element.icon"
                                                                               :color="element.color" :hidden-status="element.hidden" />
-                                                                    <span class="account-name text-truncate ms-2">{{ element.name }}<small v-if="element.investmentPositionId"> · 成本</small></span>
+                                                                    <router-link class="account-name text-truncate ms-2" :to="accountDestination(element)">{{ element.name }}<small v-if="element.investmentPositionId"> · 黄金</small></router-link>
                                                                     <small class="account-currency text-truncate ms-2">
                                                                         {{ accountCurrency(element) }}
                                                                     </small>
@@ -207,11 +207,11 @@
                                                             </v-card-text>
 
                                                             <v-card-text>
-                                                                <div class="d-flex account-toolbar align-center">
+                                                                <div class="d-flex account-toolbar align-center"><v-btn v-if="canSetUpGold(element.getAccountOrSubAccount(activeSubAccount[element.id]))" variant="text" :to="'/account/gold?accountId=' + element.getAccountOrSubAccountId(activeSubAccount[element.id])">启用黄金克数记账</v-btn>
                                                                     <v-btn class="px-2" density="comfortable" color="default" variant="text"
                                                                            :disabled="loading" :prepend-icon="mdiListBoxOutline"
-                                                                           :to="`/transaction/list?accountIds=${element.getAccountOrSubAccountId(activeSubAccount[element.id])}`">
-                                                                        {{ tt('Transaction List') }}
+                                                                           :to="accountDestination(element.getAccountOrSubAccount(activeSubAccount[element.id]))">
+                                                                        {{ element.getAccountOrSubAccount(activeSubAccount[element.id])?.investmentPositionId ? '黄金详情' : tt('Transaction List') }}
                                                                     </v-btn>
                                                                     <v-btn class="px-2 ms-1" density="comfortable" color="default" variant="text"
                                                                            :disabled="loading" :prepend-icon="mdiInvoiceListOutline"
@@ -321,6 +321,7 @@
 </template>
 
 <script setup lang="ts">
+import { accountDestination, canSetUpGold } from '@/lib/account_navigation.ts';
 import ConfirmDialog from '@/components/desktop/ConfirmDialog.vue';
 import SnackBar from '@/components/desktop/SnackBar.vue';
 import EditDialog from './list/dialogs/EditDialog.vue';

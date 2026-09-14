@@ -1,7 +1,6 @@
 <template>
     <f7-page :ptr="!sortable" @ptr:refresh="reload" @page:afterin="onPageAfterIn">
         <f7-block><f7-link href="/account/groups">机构分组：银行与支付平台</f7-link></f7-block>
-        <f7-block v-if="isInvestmentAssetsEnabled()"><f7-link href="/investment/list">黄金资产：克数、成本与买卖记录</f7-link></f7-block>
         <f7-navbar>
             <f7-nav-left :class="{ 'disabled': loading }" :back-link="tt('Back')" v-if="!sortable"></f7-nav-left>
             <f7-nav-left v-else-if="sortable">
@@ -90,7 +89,7 @@
                               :id="getAccountDomId(account)"
                               :class="{ 'has-child-list-item': account.type === AccountType.MultiSubAccounts.type && hasVisibleSubAccount(account), 'actual-first-child': account.id === firstShowingIds.accounts[accountCategory.type], 'actual-last-child': account.id === lastShowingIds.accounts[accountCategory.type] }"
                               :after="account.type === AccountType.SingleAccount.type ? accountBalance(account) : ''"
-                              :link="!sortable ? '/transaction/list?accountIds=' + account.id : null"
+                              :link="!sortable ? accountDestination(account) : null"
                               :key="account.id"
                               v-for="account in allCategorizedAccountsMap[accountCategory.type]!.accounts"
                               v-show="showHidden || !account.hidden"
@@ -113,7 +112,7 @@
                                 </f7-badge>
                             </ItemIcon>
                             <div class="nested-list-item-title">
-                                <span>{{ account.name }}<small v-if="account.investmentPositionId"> · 成本</small></span>
+                                <span>{{ account.name }}<small v-if="account.investmentPositionId"> · 黄金</small></span>
                                 <div class="item-footer" v-if="account.comment">{{ account.comment }}</div>
                             </div>
                             <div class="nested-list-item-after" v-if="account.type === AccountType.MultiSubAccounts.type">
@@ -126,7 +125,7 @@
                                               :class="{ 'actual-first-child': subAccount.id === firstShowingIds.subAccounts[account.id], 'actual-last-child': subAccount.id === lastShowingIds.subAccounts[account.id] }"
                                               :id="getAccountDomId(subAccount)"
                                               :title="subAccount.name" :footer="subAccount.comment" :after="accountBalance(account, subAccount.id)"
-                                              :link="!sortable ? '/transaction/list?accountIds=' + subAccount.id : null"
+                                              :link="!sortable ? accountDestination(subAccount) : null"
                                               :key="subAccount.id"
                                               v-for="subAccount in account.subAccounts"
                                               v-show="showHidden || !subAccount.hidden"
@@ -165,7 +164,7 @@
 
         <f7-actions close-by-outside-click close-on-escape :opened="showAccountMoreActionSheet" @actions:closed="showAccountMoreActionSheet = false">
             <f7-actions-group v-if="accountForMoreActionSheet && accountForMoreActionSheet.type === AccountType.SingleAccount.type">
-                <f7-actions-button @click="showReconciliationStatement(accountForMoreActionSheet)">{{ tt('Reconciliation Statement') }}</f7-actions-button>
+                <f7-actions-button v-if="accountForMoreActionSheet && canSetUpGold(accountForMoreActionSheet)" @click="props.f7router.navigate('/account/gold?accountId=' + accountForMoreActionSheet.id)">启用黄金克数记账</f7-actions-button><f7-actions-button @click="showReconciliationStatement(accountForMoreActionSheet)">{{ tt('Reconciliation Statement') }}</f7-actions-button>
                 <f7-actions-button @click="updateLastReconciledTime(accountForMoreActionSheet)" v-if="useLastReconciledTime">{{ tt('Mark as Reconciled') }}</f7-actions-button>
             </f7-actions-group>
             <f7-actions-group v-if="accountForMoreActionSheet && accountForMoreActionSheet.type === AccountType.SingleAccount.type">
@@ -176,7 +175,7 @@
                 <f7-actions-group :key="subAccount.id"
                                   v-for="subAccount in accountForMoreActionSheet.subAccounts"
                                   v-show="showHidden || !subAccount.hidden">
-                    <f7-actions-label>{{ subAccount.name }}</f7-actions-label>
+                    <f7-actions-label>{{ subAccount.name }}</f7-actions-label><f7-actions-button v-if="canSetUpGold(subAccount)" @click="props.f7router.navigate('/account/gold?accountId=' + subAccount.id)">启用黄金克数记账</f7-actions-button>
                     <f7-actions-button @click="showReconciliationStatement(subAccount)">{{ tt('Reconciliation Statement') }}</f7-actions-button>
                     <f7-actions-button @click="updateLastReconciledTime(subAccount)" v-if="useLastReconciledTime">{{ tt('Mark as Reconciled') }}</f7-actions-button>
                     <f7-actions-button @click="moveAllTransactions(subAccount)">{{ tt('Move All Transactions') }}</f7-actions-button>
@@ -225,7 +224,7 @@
 </template>
 
 <script setup lang="ts">
-import { isInvestmentAssetsEnabled } from '@/lib/server_settings.ts';
+import { accountDestination, canSetUpGold } from '@/lib/account_navigation.ts';
 import { ref, computed } from 'vue';
 import type { Router } from 'framework7/types';
 

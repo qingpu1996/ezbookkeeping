@@ -56,7 +56,6 @@
                     </div>
                 </li>
                 <li class="nav-link">
-                    <router-link v-if="isInvestmentAssetsEnabled()" to="/investment/list"><v-icon class="nav-item-icon" :icon="mdiCreditCardOutline"/><span class="nav-item-title">黄金资产</span></router-link>
                 </li>
                 <li class="nav-link">
                     <router-link to="/account/list">
@@ -225,7 +224,7 @@ import { APPLICATION_LOGO_PATH } from '@/consts/asset.ts';
 import { ThemeType } from '@/core/theme.ts';
 
 import { getShareCacheImageBlob } from '@/lib/cache.ts';
-import { isUserScheduledTransactionEnabled, isInvestmentAssetsEnabled } from '@/lib/server_settings.ts';
+import { isUserScheduledTransactionEnabled } from '@/lib/server_settings.ts';
 import { getSystemTheme, setExpenseAndIncomeAmountColor } from '@/lib/ui/common.ts';
 import logger from '@/lib/logger.ts';
 

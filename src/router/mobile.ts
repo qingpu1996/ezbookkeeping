@@ -190,6 +190,11 @@ const routes: Router.RouteParameters[] = [
         beforeEnter: [checkLogin]
     },
     {
+        path: '/account/gold',
+        async: asyncResolve(InvestmentListPage),
+        beforeEnter: [checkLogin]
+    },
+    {
         path: '/investment/list',
         async: asyncResolve(InvestmentListPage),
         beforeEnter: [checkLogin]

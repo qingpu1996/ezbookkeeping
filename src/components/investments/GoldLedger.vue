@@ -1,12 +1,12 @@
 <template>
     <section class="gold-ledger">
-        <header><div><p class="eyebrow">黄金资产 · 成本账本</p><h1>把每一克记清楚</h1></div><button :disabled="busy" @click="reload">刷新</button></header>
+        <header><div><p class="eyebrow">账户 · 黄金详情</p><h1>{{ accountTitle || "把每一克记清楚" }}</h1></div><button :disabled="busy" @click="reload">刷新</button></header>
         <p class="notice">这里记录已经发生的买卖，不执行交易。账户余额按成本统计；没有有效报价时不显示市值。</p>
         <p v-if="error" role="alert" class="error">{{ error }}</p>
         <p v-if="message" role="status" class="notice">{{ message }}</p>
-        <div class="positions"><button v-for="p in positions" :key="p.id" :disabled="busy || !!pending" :class="{ selected: detail?.position.id === p.id }" @click="select(p.id)"><strong>{{ p.name }}</strong><span>{{ p.quantity }} 克</span><small>成本 ¥{{ investmentMoney(p.cost) }}</small></button></div>
-        <details v-if="!pending" class="panel"><summary>添加黄金持仓</summary><p>先在“账户”中创建余额为零、没有流水的人民币投资账户，再在这里绑定。已有黄金通过“期初录入”登记，不会再次扣现金。</p>
-            <form @submit.prevent="create"><label>持仓名称<input v-model="newName" maxlength="128" required :disabled="busy" /></label><label>专用成本账户<select v-model="newAccount" required :disabled="busy"><option value="">请选择</option><option v-for="a in costAccounts" :key="a.id" :value="a.id">{{ a.name }}</option></select></label><button :disabled="busy">创建持仓</button></form>
+        <div v-if="!accountId" class="positions"><button v-for="p in positions" :key="p.id" :disabled="busy || !!pending" :class="{ selected: detail?.position.id === p.id }" @click="select(p.id)"><strong>{{ p.name }}</strong><span>{{ p.quantity }} 克</span><small>成本 ¥{{ investmentMoney(p.cost) }}</small></button></div>
+        <details v-if="!pending && (!accountId || (accountTitle && !detail))" :open="!!accountId" class="panel"><summary>{{ accountId ? "为此账户启用克数记账" : "添加黄金持仓" }}</summary><p>先在“账户”中创建余额为零、没有流水的人民币投资账户，再在这里绑定。已有黄金通过“期初录入”登记，不会再次扣现金。</p>
+            <form @submit.prevent="create"><label>持仓名称<input v-model="newName" maxlength="128" required :disabled="busy" /></label><label>专用成本账户<select v-model="newAccount" required :disabled="busy || !!accountId"><option value="">请选择</option><option v-for="a in costAccounts" :key="a.id" :value="a.id">{{ a.name }}</option></select></label><button :disabled="busy">创建持仓</button></form>
         </details>
         <template v-if="detail">
             <div class="metrics"><article><small>持有数量</small><strong>{{ detail.position.quantity }} 克</strong></article><article><small>剩余成本</small><strong>¥{{ investmentMoney(detail.position.cost) }}</strong></article><article><small>已实现盈亏</small><strong>¥{{ investmentMoney(detail.position.realized) }}</strong></article></div><p>平均成本约 ¥{{ investmentAverage(detail.position.cost, detail.position.quantity) }} / 克（含买入手续费）</p>
@@ -43,6 +43,8 @@ import { isTransactionPicturesEnabled } from '@/lib/server_settings.ts';
 import type { AccountInfoResponse } from '@/models/account.ts';
 import type { TransactionCategoryInfoResponse } from '@/models/transaction_category.ts';
 import { investmentMinorUnits, investmentMoney, investmentAverage, type InvestmentPosition, type InvestmentDetail, type InvestmentOperation, type InvestmentRequest } from '@/models/investment.ts';
+const { accountId = '' } = defineProps<{ accountId?: string }>();
+const accountTitle = ref('');
 const pictureDialog = ref<HTMLDialogElement>(); const pictureURL = ref('');
 const valuation = ref<Awaited<ReturnType<typeof services.getInvestmentValuation>>['data']['result']>();
 const positions = ref<InvestmentPosition[]>([]), accounts = ref<AccountInfoResponse[]>([]), categories = ref<TransactionCategoryInfoResponse[]>([]);
@@ -75,7 +77,7 @@ async function readValuation(): Promise<void> { if (!detail.value) return; await
 async function attach(event: Event, operationId: string): Promise<void> { const input = event.target as HTMLInputElement; const file = input.files?.[0]; if (!file || !detail.value) return; await run(async () => { const picture = (await services.uploadTransactionPicture({ pictureFile: file, clientSessionId: crypto.randomUUID() })).data.result; await services.attachInvestmentPicture({ positionId: detail.value!.position.id, operationId, pictureId: picture.pictureId }); detail.value = (await services.getInvestment(detail.value!.position.id)).data.result; message.value = '凭证已保存。'; }); input.value = ''; }
 async function viewPicture(id: string, extension: string): Promise<void> { await run(async () => { const data = (await services.readInvestmentPicture(id, extension)).data; if (pictureURL.value) URL.revokeObjectURL(pictureURL.value); pictureURL.value = URL.createObjectURL(data); pictureDialog.value?.showModal(); }); }
 onUnmounted(() => { if (pictureURL.value) URL.revokeObjectURL(pictureURL.value); });
-onMounted(() => { void run(async () => { const [a, c] = await Promise.all([services.getAllAccounts({ visibleOnly: true }), services.getAllTransactionCategories()]); accounts.value = a.data.result.flatMap(a => a.subAccounts?.length ? a.subAccounts : [a]).filter(a => !a.hidden && a.currency === 'CNY' && a.type === 1); categories.value = Object.values(c.data.result).flatMap(group => group.flatMap(c => c.subCategories || [])).filter(c => !c.hidden); await fetchPositions(); if (positions.value[0]) detail.value = (await services.getInvestment(positions.value[0].id)).data.result; }); });
+onMounted(() => { void run(async () => { const [a, c] = await Promise.all([services.getAllAccounts({ visibleOnly: false }), services.getAllTransactionCategories()]); accounts.value = a.data.result.flatMap(a => a.subAccounts?.length ? a.subAccounts : [a]).filter(a => !a.hidden && a.currency === 'CNY' && a.type === 1); categories.value = Object.values(c.data.result).flatMap(group => group.flatMap(c => c.subCategories || [])).filter(c => !c.hidden); await fetchPositions(); if (accountId) { const account = a.data.result.flatMap(a => a.subAccounts?.length ? a.subAccounts : [a]).find(a => a.id === accountId); if (!account) throw new Error('账户不存在或无权访问，请返回账户列表。'); const position = positions.value.find(p => p.costAccountId === accountId); if (position) { detail.value = (await services.getInvestment(position.id)).data.result; accountTitle.value = account.name; } else { if (!costAccounts.value.some(a => a.id === accountId)) throw new Error('此账户不能启用黄金克数记账，请使用空的人民币投资账户。'); accountTitle.value = account.name; newAccount.value = accountId; newName.value = account.name; } } else if (positions.value[0]) detail.value = (await services.getInvestment(positions.value[0].id)).data.result; }); });
 </script>
 
 <style scoped>
