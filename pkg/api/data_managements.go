@@ -167,6 +167,11 @@ func (a *DataManagementsApi) ClearAllDataHandler(c *core.WebContext) (any, *errs
 		return nil, errs.ErrNotPermittedToPerformThisAction
 	}
 
+	// The legacy clear spans multiple transactions. Disable it while new
+	// investment positions can be created; a preflight alone races binding.
+	if a.CurrentConfig().EnableInvestmentAssets {
+		return nil, errs.ErrInvestmentClearDisabled
+	}
 	if err := services.Investments.GuardClear(c, uid); err != nil {
 		return nil, errs.Or(err, errs.ErrOperationFailed)
 	}
