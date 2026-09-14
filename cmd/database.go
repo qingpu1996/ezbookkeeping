@@ -82,6 +82,11 @@ func updateAllDatabaseTablesStructure(c *core.CliContext) error {
 		return err
 	}
 
+	err = datastore.Container.UserDataStore.SyncStructs(new(models.AccountGroup), new(models.AccountGroupMember))
+	if err != nil {
+		return err
+	}
+
 	err = datastore.Container.UserDataStore.SyncStructs(new(models.Account))
 
 	if err != nil {

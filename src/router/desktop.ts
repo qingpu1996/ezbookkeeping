@@ -1,3 +1,4 @@
+import AccountGroupListPage from '@/views/desktop/accountGroups/ListPage.vue';
 import InvestmentListPage from '@/views/desktop/investments/ListPage.vue';
 import { type NavigationGuardReturn, createRouter, createWebHashHistory } from 'vue-router';
 
@@ -152,6 +153,11 @@ const router = createRouter({
                         initStartTime: route.query['startTime'],
                         initEndTime: route.query['endTime']
                     })
+                },
+                {
+                    path: '/account/groups',
+                    component: AccountGroupListPage,
+                    beforeEnter: checkLogin
                 },
                 {
                     path: '/investment/list',

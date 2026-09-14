@@ -1,3 +1,4 @@
+import AccountGroupListPage from '@/views/mobile/accountGroups/ListPage.vue';
 import InvestmentListPage from '@/views/mobile/investments/ListPage.vue';
 import type { Router } from 'framework7/types';
 
@@ -181,6 +182,11 @@ const routes: Router.RouteParameters[] = [
     {
         path: '/transaction/detail',
         async: asyncResolve(TransactionEditPage),
+        beforeEnter: [checkLogin]
+    },
+    {
+        path: '/account/groups',
+        async: asyncResolve(AccountGroupListPage),
         beforeEnter: [checkLogin]
     },
     {

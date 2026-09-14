@@ -1,5 +1,6 @@
 <template>
     <f7-page :ptr="!sortable" @ptr:refresh="reload" @page:afterin="onPageAfterIn">
+        <f7-block><f7-link href="/account/groups">机构分组：银行与支付平台</f7-link></f7-block>
         <f7-block v-if="isInvestmentAssetsEnabled()"><f7-link href="/investment/list">黄金资产：克数、成本与买卖记录</f7-link></f7-block>
         <f7-navbar>
             <f7-nav-left :class="{ 'disabled': loading }" :back-link="tt('Back')" v-if="!sortable"></f7-nav-left>

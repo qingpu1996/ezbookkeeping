@@ -1,3 +1,4 @@
+import type { AccountGroup, AccountGroupsResponse } from '@/models/accountGroup.ts';
 import type { InvestmentPosition, InvestmentDetail, InvestmentRequest } from "@/models/investment.ts";
 import axios, { type AxiosRequestConfig, type AxiosRequestHeaders, type AxiosResponse } from 'axios';
 
@@ -296,6 +297,10 @@ axios.interceptors.response.use(response => {
 });
 
 export default {
+    getAccountGroups: (): ApiResponsePromise<AccountGroupsResponse> => axios.get('v1/account-groups/list.json'),
+    saveAccountGroup: (data: { id?: string; name: string; version?: number }): ApiResponsePromise<AccountGroup> => axios.post('v1/account-groups/save.json', data),
+    deleteAccountGroup: (data: { id: string; version: number }): ApiResponsePromise<boolean> => axios.post('v1/account-groups/delete.json', data),
+    assignAccountGroup: (data: { accountId: string; groupId: string; expectedGroupId: string }): ApiResponsePromise<boolean> => axios.post('v1/account-groups/assign.json', data),
     getInvestmentValuation: (id: string): ApiResponsePromise<{ status: string; reason?: string; marketValue: string | null; unrealized?: string; positionVersion?: number; quote?: { fetchedAt: string; apiNowTime: string; marketDay: boolean; quotedPrice: boolean } }> => axios.get('v1/investments/valuation.json', { params: { id } }),
     attachInvestmentPicture: (data: { positionId: string; operationId: string; pictureId: string }): ApiResponsePromise<boolean> => axios.post('v1/investments/attachments/add.json', data),
     readInvestmentPicture: (pictureId: string, extension: string): Promise<AxiosResponse<Blob>> => axios.get(`v1/investments/pictures/${encodeURIComponent(pictureId)}.${encodeURIComponent(extension)}`, { responseType: 'blob' }),

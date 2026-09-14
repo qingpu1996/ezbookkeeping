@@ -2,6 +2,7 @@
     <v-row class="match-height">
         <v-col cols="12">
             <v-card>
+                <div class="pa-4"><router-link to="/account/groups">机构分组：银行与支付平台</router-link></div>
                 <v-layout>
                     <v-navigation-drawer :permanent="alwaysShowNav" v-model="showNav">
                         <div class="mx-6 my-4">
